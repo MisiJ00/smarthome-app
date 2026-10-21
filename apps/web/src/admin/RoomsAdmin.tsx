@@ -108,9 +108,7 @@ function RoomRow({ room }: { room: Room }) {
   };
   const removeRoom = () => {
     if (window.confirm(`Raum ${room.name} löschen?`)) {
-      remove.mutate(room.id!, {
-        onError: (e) => toast('error', errorText(e).includes('device') ? `In ${room.name} sind noch Geräte. Erst verschieben, dann löschen.` : errorText(e)),
-      });
+      remove.mutate(room.id!, { onError: (e) => toast('error', errorText(e)) });
     }
   };
 
