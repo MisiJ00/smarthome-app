@@ -16,7 +16,8 @@ Needs Node 22+ and the local stack from `../homeserver-infra` (Kratos, Postgres,
 
 ```bash
 cd ../homeserver-infra && docker compose up -d kratos smarthome-db mosquitto smarthome-backend
-cd ../smarthome-backend && ./gradlew :simulator:run     # simulated Zigbee devices (own terminal)
+cd ../smarthome-backend && MQTT_USER=simulator MQTT_PASSWORD=<MQTT_SIMULATOR_PASSWORD aus homeserver-infra/.env> \
+  ./gradlew :simulator:run                                # simulated Zigbee devices (own terminal)
 cd ../smarthome-app && npm install && npm run dev        # http://localhost:5173
 ```
 
