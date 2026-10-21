@@ -13,9 +13,10 @@
     "preview": "npm run preview -w @smarthome/web",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
-    "test": "npm run test --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present && vitest run scripts",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "api:update": "npm run update -w @smarthome/api-client"
+    "api:update": "npm run update -w @smarthome/api-client",
+    "dev:seed": "node scripts/dev-seed.mjs"
   },
   "engines": {
     "node": ">=22"

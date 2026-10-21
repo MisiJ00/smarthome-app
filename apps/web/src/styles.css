@@ -512,3 +512,348 @@ input[type='range'] {
     grid-template-columns: 1fr;
   }
 }
+
+/* Navigation in the header */
+
+.tabs-top {
+  display: flex;
+  gap: 2px;
+  margin-left: 12px;
+}
+
+.tabs-top a.active,
+.tab.active {
+  background: var(--surface-2);
+  font-weight: 600;
+}
+
+/* Admin area */
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.tab {
+  padding: 8px 14px;
+  border-radius: 10px;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background: var(--surface-2);
+}
+
+.stack {
+  display: grid;
+  gap: 18px;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.panel h2 {
+  font-size: 16px;
+}
+
+.small {
+  font-size: 13px;
+  margin: 0;
+}
+
+.list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.item-link {
+  color: inherit;
+  text-decoration: none;
+  justify-content: space-between;
+}
+
+.item-link:hover {
+  border-color: var(--accent);
+}
+
+.item-main {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.item-main .muted {
+  font-size: 13px;
+}
+
+.item-form {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 360px;
+  align-items: center;
+}
+
+.item-form.wrap {
+  flex-wrap: wrap;
+}
+
+.item-form input,
+.item-form select {
+  width: auto;
+  flex: 1 1 140px;
+}
+
+.item-edit {
+  flex-basis: 100%;
+  display: grid;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.item-edit label,
+.form-grid label {
+  display: grid;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+
+legend {
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.chip input {
+  width: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.chip-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+
+.grow {
+  flex: 1 1 220px;
+}
+
+button.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border));
+}
+
+.danger-link {
+  color: var(--danger);
+}
+
+.badge-error {
+  color: var(--danger);
+}
+
+.sortable .item {
+  cursor: grab;
+}
+
+.sortable .dragging {
+  opacity: 0.4;
+}
+
+.handle {
+  color: var(--muted);
+  letter-spacing: -2px;
+}
+
+.copyable {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.copyable code {
+  flex: 1 1 200px;
+  font-size: 15px;
+  word-break: break-all;
+}
+
+.pairing-active {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.pairing-active p {
+  margin: 4px 0 0;
+}
+
+.pulse {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse {
+    animation: none;
+  }
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filters select,
+.filters input {
+  width: auto;
+}
+
+.filters .date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table td:nth-child(4) {
+  white-space: normal;
+  min-width: 200px;
+}
+
+.table th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.pager {
+  justify-content: space-between;
+}
+
+@media (max-width: 560px) {
+  .tabs-top {
+    margin-left: 4px;
+  }
+
+  .item-form {
+    flex-wrap: wrap;
+  }
+}
+
+/* Chips inside forms stay in one line (the form's label rule would stack them) */
+.item-edit label.chip,
+.form-grid label.chip {
+  display: inline-flex;
+  font-weight: 400;
+}
+
+.chip {
+  white-space: nowrap;
+}
+
+.item-form .chip input {
+  flex: none;
+}

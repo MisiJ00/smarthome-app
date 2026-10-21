@@ -2,8 +2,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
-import { ApiProvider } from './api';
+import { AdminLayout } from './admin/AdminLayout';
+import { AuditAdmin } from './admin/AuditAdmin';
+import { DevicesAdmin } from './admin/DevicesAdmin';
+import { RightsAdmin } from './admin/RightsAdmin';
+import { RoomsAdmin } from './admin/RoomsAdmin';
+import { UserDetail } from './admin/UserDetail';
+import { UsersAdmin } from './admin/UsersAdmin';
+import { ApiProvider, useMe } from './api';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
+import { SignedInLayout } from './components/SignedInLayout';
 import { ToastProvider } from './components/Toasts';
 import { AccountPage } from './pages/AccountPage';
 import { ErrorPage } from './pages/ErrorPage';
@@ -27,13 +35,30 @@ export function App() {
                 <Route path="/account" element={<AccountPage />} />
                 <Route path="/error" element={<ErrorPage />} />
                 <Route
-                  path="/"
                   element={
                     <RequireLogin>
-                      <HomePage />
+                      <SignedInLayout />
                     </RequireLogin>
                   }
-                />
+                >
+                  <Route path="/" element={<HomePage />} />
+                  <Route
+                    path="/admin"
+                    element={
+                      <RequireAdmin>
+                        <AdminLayout />
+                      </RequireAdmin>
+                    }
+                  >
+                    <Route index element={<Navigate to="devices" replace />} />
+                    <Route path="devices" element={<DevicesAdmin />} />
+                    <Route path="rooms" element={<RoomsAdmin />} />
+                    <Route path="users" element={<UsersAdmin />} />
+                    <Route path="users/:id" element={<UserDetail />} />
+                    <Route path="rights" element={<RightsAdmin />} />
+                    <Route path="audit" element={<AuditAdmin />} />
+                  </Route>
+                </Route>
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </BrowserRouter>
@@ -51,6 +76,18 @@ function RequireLogin({ children }: { children: ReactNode }) {
   }
   if (state.status !== 'signedIn') {
     return <Navigate to="/login" replace />;
+  }
+  return children;
+}
+
+/** Only for the interface; the backend refuses every admin request of others anyway. */
+function RequireAdmin({ children }: { children: ReactNode }) {
+  const me = useMe();
+  if (me.isPending) {
+    return <p className="muted center">Lade …</p>;
+  }
+  if (!me.data?.roles?.includes('admin')) {
+    return <Navigate to="/" replace />;
   }
   return children;
 }
