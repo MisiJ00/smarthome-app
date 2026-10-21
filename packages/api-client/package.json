@@ -1,0 +1,21 @@
+{
+  "name": "@smarthome/api-client",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Typed client for the smart home backend, generated from its OpenAPI description",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "openapi-typescript openapi.json -o src/schema.d.ts",
+    "update": "node scripts/update.mjs && npm run generate",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "openapi-fetch": "^0.17.0"
+  },
+  "devDependencies": {
+    "openapi-typescript": "^7.13.0"
+  }
+}

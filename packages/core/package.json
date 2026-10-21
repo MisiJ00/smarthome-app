@@ -1,0 +1,17 @@
+{
+  "name": "@smarthome/core",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Logic shared by the web interface and the phone app: device capabilities, live events",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@smarthome/api-client": "*"
+  }
+}

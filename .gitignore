@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.env.local
+.env.*.local
+# Local test credentials for the dev stack
+.dev-credentials
+test-results/
+playwright-report/
+
+# Local editor/assistant settings
+.claude/

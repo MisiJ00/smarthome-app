@@ -1,0 +1,33 @@
+{
+  "name": "smarthome-app",
+  "private": true,
+  "description": "Web interface (and later the phone app) for the smart home backend",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @smarthome/web",
+    "build": "npm run build -w @smarthome/web",
+    "preview": "npm run preview -w @smarthome/web",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "test": "npm run test --workspaces --if-present",
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "api:update": "npm run update -w @smarthome/api-client"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}
