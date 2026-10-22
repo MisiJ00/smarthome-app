@@ -117,6 +117,7 @@ function NotificationCard() {
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 14 },
+  // Extra room at the bottom so "Abmelden" does not end up under the gesture bar
+  content: { padding: 16, gap: 14, paddingBottom: 48 },
   actions: { marginTop: 8 },
 });
