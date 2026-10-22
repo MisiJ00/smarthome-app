@@ -1,0 +1,14 @@
+{
+  "name": "@smarthome/theme",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Design tokens shared by the web interface (as CSS variables) and the phone app (as style values)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  }
+}

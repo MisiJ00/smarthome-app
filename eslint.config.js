@@ -22,4 +22,10 @@ export default tseslint.config(
     files: ['**/*.{js,mjs}', '**/vite.config.ts'],
     languageOptions: { globals: globals.node },
   },
+  {
+    // Expo config plugins are loaded with require()
+    files: ['apps/mobile/plugins/**/*.js'],
+    languageOptions: { sourceType: 'commonjs' },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
+  },
 );

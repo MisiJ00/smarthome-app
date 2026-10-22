@@ -388,6 +388,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["mine_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/devices/discovered": {
         parameters: {
             query?: never;
@@ -806,6 +822,11 @@ export interface components {
             name?: string;
             email?: string;
             roles?: string[];
+        };
+        Subscription: {
+            enabled?: boolean;
+            server?: string;
+            topic?: string;
         };
         DiscoveredDevice: {
             adapter?: string;
@@ -1793,6 +1814,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CurrentUser"];
+                };
+            };
+        };
+    };
+    mine_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Subscription"];
                 };
             };
         };

@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Smart Home",
+    "slug": "smarthome",
+    "scheme": "smarthome",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.homeserver.smarthome"
+    },
+    "android": {
+      "package": "dev.homeserver.smarthome",
+      "adaptiveIcon": {
+        "backgroundColor": "#2F6FDE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ],
+      "./plugins/with-short-native-build-dir"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

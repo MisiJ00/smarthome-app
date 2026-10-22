@@ -1,56 +1,8 @@
-/* Light and dark: follows the system unless chosen in the header (data-theme on <html>). */
-:root {
-  --bg: #f4f6f9;
-  --surface: #ffffff;
-  --surface-2: #eef1f5;
-  --text: #17202b;
-  --muted: #5d6877;
-  --border: #dde2e9;
-  --accent: #2f6fde;
-  --accent-text: #ffffff;
-  --on: #f5b13d;
-  --ok: #1f8a4c;
-  --warn: #c2410c;
-  --danger: #c62828;
-  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
-  --radius: 14px;
-  color-scheme: light;
-}
-
-:root[data-theme='dark'] {
-  --bg: #0f141b;
-  --surface: #171e27;
-  --surface-2: #202935;
-  --text: #e7ecf2;
-  --muted: #98a3b3;
-  --border: #2a3441;
-  --accent: #5b8ff0;
-  --accent-text: #0b1220;
-  --on: #f5b13d;
-  --ok: #4ade80;
-  --warn: #fb923c;
-  --danger: #f87171;
-  --shadow: none;
-  color-scheme: dark;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #0f141b;
-    --surface: #171e27;
-    --surface-2: #202935;
-    --text: #e7ecf2;
-    --muted: #98a3b3;
-    --border: #2a3441;
-    --accent: #5b8ff0;
-    --accent-text: #0b1220;
-    --ok: #4ade80;
-    --warn: #fb923c;
-    --danger: #f87171;
-    --shadow: none;
-    color-scheme: dark;
-  }
-}
+/*
+ * Colours, spacing (--space-*), radii (--radius-*, --radius for cards) and type sizes (--font-*) come from
+ * packages/theme as CSS variables (injected in main.tsx), shared with the phone app. Light and dark follow the system
+ * unless chosen in the header (data-theme on <html>).
+ */
 
 * {
   box-sizing: border-box;

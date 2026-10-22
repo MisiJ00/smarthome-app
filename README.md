@@ -1,14 +1,16 @@
 # smarthome-app
 
-Web interface (and later the phone app) for the smart home backend (`../smarthome-backend`). TypeScript, npm workspaces:
+Web interface and Android app for the smart home backend (`../smarthome-backend`). TypeScript, npm workspaces:
 
 ```
 apps/web               React + Vite: login, account setup, devices by room, live state, confirmations, admin area
+apps/mobile            Expo (Android): login, devices by room, live state, confirmations, approval by fingerprint
 packages/api-client    typed client, generated from the backend's OpenAPI description, plus live event types
-packages/core          logic shared with the future Expo app: device capabilities → controls, live events → lists
+packages/core          logic shared by web and app: device capabilities → controls, live events → lists
+packages/theme         design tokens (colours light/dark, spacing, radii, type sizes, icon names) for both
 ```
 
-`apps/mobile` (Expo) comes later and uses `api-client` and `core` as well. npm workspaces instead of pnpm: npm is there anyway and is enough for a handful of packages.
+Web and app look alike because both take their values from `packages/theme`: the web gets them as CSS variables (`--accent`, `--space-md`, `--font-lg`, …), the app as numbers and colours. Buttons are called the same in both (`primary`, `ghost`, `danger`). npm workspaces instead of pnpm: npm is there anyway and is enough for a handful of packages.
 
 ## Start locally
 
@@ -54,6 +56,22 @@ Browser flows of Ory Kratos as a single-page app (JSON requests with cookies, se
 3. Live updates: `POST /api/events/ticket`, then `ws(s)://<host>/api/events?ticket=…`. After every (re)connect the state is loaded again via REST.
 
 Approving with Face ID needs the phone app; in the web interface another person (or an admin) approves.
+
+## Android app (apps/mobile)
+
+Expo SDK 58 with a local native module (`modules/device-key`): a P-256 key in the Android Keystore that only signs after a fingerprint, for approving requests (`/api/confirmations/{id}/challenge` and `/approve`). The app talks to one server address that serves `/api` and `/kratos` (locally the Vite dev server, later Caddy); in the emulator that is `http://10.0.2.2:5173`. Sign-in uses Kratos's native API flow (session token in the Keystore-backed SecureStore, JWT only in memory). New accounts are set up via the web page from the admin's link.
+
+Build an APK without an Expo account (needs JDK 21 and the Android SDK, `ANDROID_HOME`):
+
+```bash
+cd apps/mobile && npx expo prebuild --platform android --clean
+cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86_64
+# → android/app/build/outputs/apk/release/app-release.apk (signed with the debug key; fine for own phones)
+```
+
+On Windows the C++ builds create paths over 260 characters: install CMake 3.31.6 (`sdkmanager "cmake;3.31.6"`, its ninja handles long paths) and have Windows long paths enabled; `plugins/with-short-native-build-dir.js` selects that CMake and builds in `.cxx/` of this repo.
+
+Push messages come through the [ntfy](https://ntfy.sh) app (F-Droid/GitHub, no Google services): Settings → "In ntfy abonnieren" subscribes to the user's secret topic on the home server's ntfy.
 
 ## Commands
 

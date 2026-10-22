@@ -11,3 +11,6 @@ playwright-report/
 
 # Local editor/assistant settings
 .claude/
+
+# C++ build folders of the Android app (see apps/mobile/plugins/with-short-native-build-dir.js)
+.cxx/
