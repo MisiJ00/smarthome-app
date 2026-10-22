@@ -1,7 +1,7 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -32,6 +32,14 @@ export default function RootLayout() {
 function Screens() {
   const { state } = useAuth();
   const c = useColors();
+  const queries = useQueryClient();
+  const signedIn = state.status === 'signedIn';
+  // Nothing of one account may be shown to the next one signing in on this phone
+  useEffect(() => {
+    if (!signedIn) {
+      queries.clear();
+    }
+  }, [signedIn, queries]);
   if (state.status === 'loading') {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg }}>
@@ -39,7 +47,6 @@ function Screens() {
       </View>
     );
   }
-  const signedIn = state.status === 'signedIn';
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
       <Stack.Protected guard={signedIn}>
