@@ -7,7 +7,7 @@ import { groupByRoom } from '@smarthome/core';
 
 import { Confirmations } from '../components/Confirmations';
 import { DeviceCard } from '../components/DeviceCard';
-import { Muted, Screen, useToast } from '../components/ui';
+import { ErrorText, Muted, Screen, useToast } from '../components/ui';
 import { useDevices, useRooms } from '../lib/api';
 import { useLiveEvents, type LiveStatus } from '../lib/live';
 import { useColors } from '../lib/theme';
@@ -35,7 +35,8 @@ export default function HomeScreen() {
   );
   const live = useLiveEvents(onEvent);
   const groups = groupByRoom(rooms.data ?? [], devices.data ?? []);
-  const loading = rooms.isPending || devices.isPending;
+  const failed = rooms.isError || devices.isError;
+  const loading = !failed && (rooms.isPending || devices.isPending);
 
   return (
     <Screen>
@@ -58,7 +59,8 @@ export default function HomeScreen() {
       >
         <Confirmations />
         {loading && <Muted>Lade Geräte …</Muted>}
-        {!loading && groups.length === 0 && <Muted>Noch keine Geräte. Sobald ein Admin dir Rechte gegeben hat, erscheinen sie hier.</Muted>}
+        {failed && <ErrorText>Die Geräte konnten nicht geladen werden. Zum Neuladen nach unten ziehen.</ErrorText>}
+        {!loading && !failed && groups.length === 0 && <Muted>Noch keine Geräte. Sobald ein Admin dir Rechte gegeben hat, erscheinen sie hier.</Muted>}
         {groups.map((group) => (
           <View key={group.room?.id ?? 'none'} style={styles.room}>
             <Text style={[styles.roomName, { color: c.text }]}>{group.room?.name ?? 'Ohne Raum'}</Text>

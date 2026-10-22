@@ -38,11 +38,12 @@ export function createApiClient(options: ApiClientOptions) {
       request.headers.set('X-Smarthome-Client', options.client);
       return request;
     },
+    // Only looks at the response and returns nothing: openapi-fetch rejects a returned response that is not
+    // `instanceof Response`, and Expo's fetch (the app's global fetch) has its own Response class.
     onResponse({ response }) {
       if (response.status === 401) {
         options.onUnauthorized?.();
       }
-      return response;
     },
   };
   client.use(auth);
