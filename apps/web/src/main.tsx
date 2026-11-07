@@ -9,6 +9,7 @@ import { cssVariables } from '@smarthome/theme';
 
 import { App } from './App';
 import { initAppearance } from './components/theme';
+import { registerServiceWorker } from './pwa';
 
 // Design tokens as CSS variables (spacing, radii, type and the classic colours as fallback), before the first render
 const tokens = document.createElement('style');
@@ -23,3 +24,5 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+registerServiceWorker();

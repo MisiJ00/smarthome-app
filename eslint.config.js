@@ -23,6 +23,11 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
+    // The service worker runs in a worker scope, not in a page
+    files: ['apps/web/public/sw.js'],
+    languageOptions: { globals: globals.serviceworker },
+  },
+  {
     // Expo config plugins are loaded with require()
     files: ['apps/mobile/plugins/**/*.js'],
     languageOptions: { sourceType: 'commonjs' },
