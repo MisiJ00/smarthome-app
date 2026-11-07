@@ -62,7 +62,7 @@ function Tile({ item, colors, busy }: { item: WidgetItem; colors: ThemeColors; b
       style={{
         flex: 1,
         height: 'match_parent',
-        padding: 14,
+        padding: 10,
         borderRadius: 22,
         justifyContent: 'space-between',
         // like the app's tiles: matte with a hairline until on, then lit with the gradient
@@ -71,23 +71,24 @@ function Tile({ item, colors, busy }: { item: WidgetItem; colors: ThemeColors; b
           : { backgroundColor: hex(colors.surface), borderWidth: 1, borderColor: hex(`${colors.text}14`) }),
       }}
     >
-      <FlexWidget
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 13,
-          alignItems: 'center',
-          justifyContent: 'center',
-          // frosted glass on the gradient
-          ...(on ? { backgroundColor: hex('#ffffff4d'), borderWidth: 1, borderColor: hex('#ffffff66') } : { backgroundColor: hex(colors.surface2) }),
-        }}
-      >
-        <SvgWidget svg={iconSvg(item.icon, on ? colors.accentText : colors.muted)} style={{ width: 20, height: 20 }} />
+      {/* icon and state side by side, the name below: fits a tile that is only about 90 dp high */}
+      <FlexWidget style={{ width: 'match_parent', flexDirection: 'row', alignItems: 'center', flexGap: 8 }}>
+        <FlexWidget
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 11,
+            alignItems: 'center',
+            justifyContent: 'center',
+            // frosted glass on the gradient
+            ...(on ? { backgroundColor: hex('#ffffff4d'), borderWidth: 1, borderColor: hex('#ffffff66') } : { backgroundColor: hex(colors.surface2) }),
+          }}
+        >
+          <SvgWidget svg={iconSvg(item.icon, on ? colors.accentText : colors.muted)} style={{ width: 18, height: 18 }} />
+        </FlexWidget>
+        <TextWidget text={status} maxLines={2} truncate="END" style={{ fontSize: 12, fontWeight: '600', color: hex(muted) }} />
       </FlexWidget>
-      <FlexWidget style={{ width: 'match_parent' }}>
-        <TextWidget text={item.name} maxLines={2} truncate="END" style={{ fontSize: 14, fontWeight: '700', color: hex(fg) }} />
-        <TextWidget text={status} maxLines={1} truncate="END" style={{ fontSize: 12, fontWeight: '500', color: hex(muted) }} />
-      </FlexWidget>
+      <TextWidget text={item.name} maxLines={2} truncate="END" style={{ width: 'match_parent', fontSize: 14, fontWeight: '700', color: hex(fg) }} />
     </FlexWidget>
   );
 }

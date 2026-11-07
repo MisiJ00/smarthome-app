@@ -32,11 +32,11 @@
               "description": "Bis zu vier Geräte mit einem Tipp schalten",
               "previewImage": "./assets/widget-preview.png",
               "minWidth": "180dp",
-              "minHeight": "110dp",
+              "minHeight": "180dp",
               "targetCellWidth": 3,
-              "targetCellHeight": 2,
+              "targetCellHeight": 3,
               "maxResizeWidth": "400dp",
-              "maxResizeHeight": "260dp",
+              "maxResizeHeight": "340dp",
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
             }
@@ -49,7 +49,8 @@
         "expo-build-properties",
         {
           "android": {
-            "usesCleartextTraffic": true
+            "usesCleartextTraffic": true,
+            "extraProguardRules": "-keep class * extends androidx.room.RoomDatabase { *; } -keep class androidx.work.** { *; } -dontwarn androidx.room.paging.**"
           }
         }
       ],
