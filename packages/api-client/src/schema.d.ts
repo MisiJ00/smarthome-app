@@ -36,6 +36,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/widgets/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["reorder_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/users": {
         parameters: {
             query?: never;
@@ -116,6 +132,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/widgets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_4"];
+        put?: never;
+        post: operations["create_4"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/me/trusted-devices": {
         parameters: {
             query?: never;
@@ -171,9 +203,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
-        post: operations["create_4"];
+        post: operations["create_5"];
         delete?: never;
         options?: never;
         head?: never;
@@ -203,7 +235,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_5"];
+        get: operations["list_6"];
         put?: never;
         post: operations["add"];
         delete?: never;
@@ -324,6 +356,22 @@ export interface paths {
         patch: operations["update_1"];
         trace?: never;
     };
+    "/api/me/widgets/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_2"];
+        options?: never;
+        head?: never;
+        patch: operations["update_2"];
+        trace?: never;
+    };
     "/api/grants/{id}": {
         parameters: {
             query?: never;
@@ -334,10 +382,10 @@ export interface paths {
         get: operations["get_2"];
         put?: never;
         post?: never;
-        delete: operations["delete_2"];
+        delete: operations["delete_3"];
         options?: never;
         head?: never;
-        patch: operations["update_2"];
+        patch: operations["update_3"];
         trace?: never;
     };
     "/api/devices/{id}": {
@@ -353,7 +401,7 @@ export interface paths {
         delete: operations["remove"];
         options?: never;
         head?: never;
-        patch: operations["update_3"];
+        patch: operations["update_4"];
         trace?: never;
     };
     "/api/users/{userId}/trusted-devices": {
@@ -420,6 +468,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/widgets/data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["data"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/devices/discovered": {
         parameters: {
             query?: never;
@@ -443,7 +507,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_6"];
+        get: operations["list_7"];
         put?: never;
         post?: never;
         delete?: never;
@@ -475,7 +539,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_7"];
+        get: operations["list_8"];
         put?: never;
         post?: never;
         delete?: never;
@@ -526,7 +590,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["delete_3"];
+        delete: operations["delete_4"];
         options?: never;
         head?: never;
         patch?: never;
@@ -634,6 +698,32 @@ export interface components {
             system?: boolean;
             /** Format: int64 */
             userCount?: number;
+        };
+        CreateWidgetRequest: {
+            /** @enum {string} */
+            kind: "switch" | "dimmer" | "thermostat" | "lock" | "status" | "room";
+            /** @enum {string} */
+            targetType: "device" | "room" | "scene";
+            /** Format: int64 */
+            targetId: number;
+            config?: {
+                [key: string]: unknown;
+            };
+        };
+        WidgetResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            kind?: "switch" | "dimmer" | "thermostat" | "lock" | "status" | "room";
+            /** @enum {string} */
+            targetType?: "device" | "room" | "scene";
+            /** Format: int64 */
+            targetId?: number;
+            config?: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            position?: number;
         };
         RegisterRequest: {
             name?: string;
@@ -811,6 +901,13 @@ export interface components {
             /** Format: int32 */
             sort?: number;
         };
+        UpdateWidgetRequest: {
+            /** @enum {string} */
+            kind?: "switch" | "dimmer" | "thermostat" | "lock" | "status" | "room";
+            config?: {
+                [key: string]: unknown;
+            };
+        };
         UpdateGrantRequest: {
             requiresConfirmation: boolean;
         };
@@ -857,6 +954,36 @@ export interface components {
             name?: string;
             email?: string;
             roles?: string[];
+        };
+        HomescreenData: {
+            /** Format: date-time */
+            generatedAt?: string;
+            widgets?: components["schemas"]["WidgetData"][];
+        };
+        WidgetData: {
+            /** Format: int64 */
+            id?: number;
+            /** @enum {string} */
+            kind?: "switch" | "dimmer" | "thermostat" | "lock" | "status" | "room";
+            /** @enum {string} */
+            targetType?: "device" | "room" | "scene";
+            /** Format: int64 */
+            targetId?: number;
+            available?: boolean;
+            name?: string;
+            /** Format: int64 */
+            roomId?: number;
+            state?: {
+                [key: string]: unknown;
+            };
+            actions?: components["schemas"]["DevicePermission"][];
+            /** Format: int32 */
+            deviceCount?: number;
+            /** Format: int32 */
+            onCount?: number;
+            config?: {
+                [key: string]: unknown;
+            };
         };
         DiscoveredDevice: {
             adapter?: string;
@@ -940,6 +1067,28 @@ export interface operations {
         };
     };
     reorder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReorderRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reorder_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -1159,6 +1308,50 @@ export interface operations {
             };
         };
     };
+    list_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetResponse"][];
+                };
+            };
+        };
+    };
+    create_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWidgetRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetResponse"];
+                };
+            };
+        };
+    };
     mine: {
         parameters: {
             query?: never;
@@ -1251,7 +1444,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_5: {
         parameters: {
             query?: {
                 subjectType?: "role" | "user";
@@ -1276,7 +1469,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    create_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -1320,7 +1513,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_6: {
         parameters: {
             query?: {
                 roomId?: string;
@@ -1674,6 +1867,52 @@ export interface operations {
             };
         };
     };
+    delete_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateWidgetRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetResponse"];
+                };
+            };
+        };
+    };
     get_2: {
         parameters: {
             query?: never;
@@ -1696,7 +1935,7 @@ export interface operations {
             };
         };
     };
-    delete_2: {
+    delete_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1716,7 +1955,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1784,7 +2023,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1894,6 +2133,26 @@ export interface operations {
             };
         };
     };
+    data: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HomescreenData"];
+                };
+            };
+        };
+    };
     discovered: {
         parameters: {
             query?: never;
@@ -1914,7 +2173,7 @@ export interface operations {
             };
         };
     };
-    list_6: {
+    list_7: {
         parameters: {
             query?: {
                 status?: string;
@@ -1958,7 +2217,7 @@ export interface operations {
             };
         };
     };
-    list_7: {
+    list_8: {
         parameters: {
             query?: {
                 userId?: number;
@@ -2031,7 +2290,7 @@ export interface operations {
             };
         };
     };
-    delete_3: {
+    delete_4: {
         parameters: {
             query?: never;
             header?: never;
