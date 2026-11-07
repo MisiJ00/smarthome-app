@@ -15,7 +15,10 @@ interface UiNode {
   attributes: { name?: string; value?: unknown; node_type?: string };
   messages?: UiText[];
   group?: string;
+  meta?: { label?: { text?: string; context?: Record<string, unknown> } };
 }
+
+export type { UiNode };
 
 export interface Flow {
   id: string;

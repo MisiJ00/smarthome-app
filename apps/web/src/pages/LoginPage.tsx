@@ -4,6 +4,7 @@ import { Navigate } from 'react-router';
 import { useAuth } from '../auth/AuthProvider';
 import { KratosError, createFlow, messages, submitFlow, type Flow } from '../auth/kratos';
 import { errorTexts } from '../auth/texts';
+import { PasskeyCancelled, getPasskeyAssertion, passkeysSupported } from '../auth/webauthn';
 import { AuthLayout, Errors } from '../components/AuthLayout';
 
 /** Login with email or username and password; with TOTP set up, the second factor follows. */
@@ -43,6 +44,27 @@ function Password({ onDone }: { onDone: () => Promise<void> }) {
     }
   };
 
+  const withPasskey = async () => {
+    setBusy(true);
+    setErrors([]);
+    try {
+      const flow = await startFlow({});
+      const assertion = await getPasskeyAssertion(flow);
+      const result = await submitFlow('login', flow, { method: 'passkey', passkey_login: assertion });
+      if (result.kind === 'invalid') {
+        setErrors(errorTexts(messages(result.flow)));
+      } else {
+        await onDone();
+      }
+    } catch (error) {
+      if (!(error instanceof PasskeyCancelled)) {
+        setErrors([error instanceof Error ? error.message : 'Anmeldung fehlgeschlagen']);
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <AuthLayout title="Anmelden">
       <form onSubmit={submit} className="form">
@@ -59,6 +81,11 @@ function Password({ onDone }: { onDone: () => Promise<void> }) {
           {busy ? 'Melde an …' : 'Anmelden'}
         </button>
       </form>
+      {passkeysSupported() && (
+        <button type="button" className="ghost passkey-login" onClick={() => void withPasskey()} disabled={busy}>
+          Mit Passkey anmelden
+        </button>
+      )}
       <p className="hint">Neues Konto? Öffne den Einrichtungslink, den du vom Admin bekommen hast.</p>
     </AuthLayout>
   );

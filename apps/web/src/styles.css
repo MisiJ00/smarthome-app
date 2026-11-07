@@ -1768,3 +1768,44 @@ legend {
 .item-form .chip input {
   flex: none;
 }
+
+/* ---------- Passkeys (login button, list in the account page) ---------- */
+
+.passkey-login {
+  width: 100%;
+  margin-top: var(--space-sm);
+}
+
+.passkeys {
+  display: grid;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+  padding-top: var(--space-lg);
+  border-top: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.passkeys h2 {
+  margin: 0;
+  font-size: var(--font-md);
+  font-weight: 720;
+}
+
+.passkeys .hint {
+  margin: 0;
+  text-align: left;
+}
+
+.passkey-list {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passkey-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
