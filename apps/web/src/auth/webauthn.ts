@@ -106,7 +106,7 @@ export function passkeysSupported(): boolean {
 /** Why a passkey step failed, in words for the user. Cancelling is not an error worth shouting about. */
 export class PasskeyCancelled extends Error {}
 
-function wrap(error: unknown): never {
+export function passkeyError(error: unknown): never {
   if (error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'AbortError')) {
     throw new PasskeyCancelled('Abgebrochen');
   }
@@ -132,7 +132,7 @@ export async function getPasskeyAssertion(loginFlow: Flow): Promise<string> {
     const credential = await navigator.credentials.get({ publicKey: options });
     return assertionJson(credential as PublicKeyCredential);
   } catch (error) {
-    return wrap(error);
+    return passkeyError(error);
   }
 }
 
@@ -143,6 +143,6 @@ export async function createPasskey(settingsFlow: Flow): Promise<string> {
     const credential = await navigator.credentials.create({ publicKey: options });
     return attestationJson(credential as PublicKeyCredential);
   } catch (error) {
-    return wrap(error);
+    return passkeyError(error);
   }
 }

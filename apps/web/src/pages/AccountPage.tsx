@@ -6,6 +6,7 @@ import { KratosError, createFlow, getFlow, messages, submitFlow, type Flow } fro
 import { errorTexts } from '../auth/texts';
 import { AuthLayout, Errors } from '../components/AuthLayout';
 import { useToast } from '../components/Toasts';
+import { ApprovalPasskeySettings } from './ApprovalPasskeySettings';
 import { PasskeySettings } from './PasskeySettings';
 
 /** Choose a password (after the setup code) or change it (Kratos settings flow). */
@@ -93,6 +94,7 @@ export function AccountPage() {
         </button>
       </form>
       {!isSetup && <PasskeySettings />}
+      {!isSetup && <ApprovalPasskeySettings />}
       {!isSetup && (
         <p className="hint">
           <Link to="/">Zurück</Link>

@@ -132,6 +132,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/me/trusted-devices/webauthn": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["registerWebAuthn"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/me/trusted-devices/webauthn/challenge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["webauthnOptions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/grants": {
         parameters: {
             query?: never;
@@ -611,6 +643,8 @@ export interface components {
             /** Format: int64 */
             id?: number;
             name?: string;
+            kind?: string;
+            credentialId?: string;
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
@@ -618,6 +652,21 @@ export interface components {
             /** Format: date-time */
             revokedAt?: string;
             active?: boolean;
+        };
+        WebAuthnRegisterRequest: {
+            name?: string;
+            clientDataJson?: string;
+            attestationObject?: string;
+        };
+        WebAuthnOptions: {
+            challenge?: string;
+            rpId?: string;
+            rpName?: string;
+            userHandle?: string;
+            userName?: string;
+            excludeCredentialIds?: string[];
+            /** Format: date-time */
+            expiresAt?: string;
         };
         CreateGrantRequest: {
             /** @enum {string} */
@@ -738,6 +787,8 @@ export interface components {
             trustedDeviceId?: number;
             nonce?: string;
             signature?: string;
+            authenticatorData?: string;
+            clientDataJson?: string;
         };
         StartRequest: {
             /** Format: int32 */
@@ -1150,6 +1201,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TrustedDeviceResponse"];
+                };
+            };
+        };
+    };
+    registerWebAuthn: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Smarthome-Client"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebAuthnRegisterRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrustedDeviceResponse"];
+                };
+            };
+        };
+    };
+    webauthnOptions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebAuthnOptions"];
                 };
             };
         };

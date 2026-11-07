@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 
-import { createApiClient, unwrap, type ApiClient, type CommandResponse, type Confirmation, type Device, type Room } from '@smarthome/api-client';
+import { createApiClient, unwrap, type ApiClient, type CommandResponse, type components, type Confirmation, type Device, type Room } from '@smarthome/api-client';
 
+import { createApprovalCredential, signApproval } from './auth/approvalPasskey';
 import { useAuth } from './auth/AuthProvider';
 
 const ApiContext = createContext<ApiClient | null>(null);
@@ -29,6 +30,7 @@ export const keys = {
   rooms: ['rooms'] as const,
   devices: ['devices'] as const,
   pendingConfirmations: ['confirmations', 'pending'] as const,
+  myTrustedDevices: ['me', 'trusted-devices'] as const,
 };
 
 export function useMe() {
@@ -66,6 +68,62 @@ export function useCommand() {
         void queries.invalidateQueries({ queryKey: keys.pendingConfirmations });
       }
     },
+  });
+}
+
+export type TrustedDevice = components['schemas']['TrustedDeviceResponse'];
+
+/** The caller's own phones and browser passkeys that may sign approvals. */
+export function useMyTrustedDevices() {
+  const api = useApi();
+  return useQuery({
+    queryKey: keys.myTrustedDevices,
+    queryFn: async (): Promise<TrustedDevice[]> => unwrap(await api.GET('/api/me/trusted-devices')),
+  });
+}
+
+export function useRevokeMyTrustedDevice() {
+  const api = useApi();
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => unwrap(await api.DELETE('/api/me/trusted-devices/{id}', { params: { path: { id } } })),
+    onSettled: () => queries.invalidateQueries({ queryKey: keys.myTrustedDevices }),
+  });
+}
+
+/** Registers a browser passkey as trusted device: challenge, the browser creates the credential, the backend checks it. */
+export function useRegisterBrowserPasskey() {
+  const api = useApi();
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const options = unwrap(await api.POST('/api/me/trusted-devices/webauthn/challenge'));
+      const created = await createApprovalCredential(options);
+      return unwrap(await api.POST('/api/me/trusted-devices/webauthn', { body: { name, ...created } }));
+    },
+    onSettled: () => queries.invalidateQueries({ queryKey: keys.myTrustedDevices }),
+  });
+}
+
+/** Approves one's own request with a browser passkey: challenge, one gesture, signed approval. */
+export function useApproveWithPasskey() {
+  const api = useApi();
+  const queries = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, device }: { id: number; device: TrustedDevice }) => {
+      if (device.id === undefined || !device.credentialId) {
+        throw new Error('Dieser Passkey ist unvollständig.');
+      }
+      const challenge = unwrap(await api.POST('/api/confirmations/{id}/challenge', { params: { path: { id } } }));
+      const signed = await signApproval(challenge.payload ?? '', device.credentialId);
+      return unwrap(
+        await api.POST('/api/confirmations/{id}/approve', {
+          params: { path: { id } },
+          body: { trustedDeviceId: device.id, nonce: challenge.nonce, ...signed },
+        }),
+      );
+    },
+    onSettled: () => queries.invalidateQueries({ queryKey: keys.pendingConfirmations }),
   });
 }
 
