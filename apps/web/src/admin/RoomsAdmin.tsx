@@ -1,12 +1,14 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
+import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react';
 
 import type { Room } from '@smarthome/api-client';
 import { sortRooms } from '@smarthome/core';
 
 import { useRooms } from '../api';
+import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toasts';
 import { useCreateRoom, useDeleteRoom, useReorderRooms, useUpdateRoom } from './adminApi';
-import { Panel, errorText } from './ui';
+import { EmptyState, MenuItem, Panel, RowMenu, StatusBadge, errorText } from './ui';
 
 /** Create, rename, sort (drag and drop or arrows) and delete rooms. */
 export function RoomsAdmin() {
@@ -42,18 +44,19 @@ export function RoomsAdmin() {
         <form className="item-form" onSubmit={submit}>
           <input aria-label="Name des Raums" placeholder="z. B. Küche" value={name} onChange={(e) => setName(e.target.value)} maxLength={64} required />
           <button type="submit" className="primary" disabled={create.isPending || !name.trim()}>
+            <Icon name="add" size={16} />
             Anlegen
           </button>
         </form>
       </Panel>
       <Panel title="Räume">
-        {list.length === 0 && <p className="muted">Noch keine Räume.</p>}
+        {list.length === 0 && <EmptyState icon="room">Noch keine Räume.</EmptyState>}
         <p className="muted small">Reihenfolge per Ziehen oder mit den Pfeilen ändern; so erscheinen die Räume auf der Startseite.</p>
-        <ol className="list sortable">
+        <ol className="list sortable adm-list">
           {list.map((room, index) => (
             <li
               key={room.id}
-              className={`item ${dragged === index ? 'dragging' : ''}`}
+              className={`item adm-item ${dragged === index ? 'dragging' : ''}`}
               draggable
               onDragStart={(e) => {
                 // Firefox only starts dragging with some data set
@@ -72,18 +75,31 @@ export function RoomsAdmin() {
               }}
               onDragEnd={() => setDragged(null)}
             >
-              <span className="handle" aria-hidden>
-                ⋮⋮
+              <span className="handle adm-handle" aria-hidden>
+                <GripVertical size={18} />
               </span>
-              <RoomRow room={room} />
-              <div className="row">
-                <button type="button" className="ghost" aria-label={`${room.name} nach oben`} disabled={index === 0} onClick={() => move(index, index - 1)}>
-                  ↑
-                </button>
-                <button type="button" className="ghost" aria-label={`${room.name} nach unten`} disabled={index === list.length - 1} onClick={() => move(index, index + 1)}>
-                  ↓
-                </button>
-              </div>
+              <RoomRow room={room}>
+                <div className="adm-arrows">
+                  <button
+                    type="button"
+                    className="ghost icon-button adm-icon-button"
+                    aria-label={`${room.name} nach oben`}
+                    disabled={index === 0}
+                    onClick={() => move(index, index - 1)}
+                  >
+                    <ChevronUp size={18} aria-hidden />
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost icon-button adm-icon-button"
+                    aria-label={`${room.name} nach unten`}
+                    disabled={index === list.length - 1}
+                    onClick={() => move(index, index + 1)}
+                  >
+                    <ChevronDown size={18} aria-hidden />
+                  </button>
+                </div>
+              </RoomRow>
             </li>
           ))}
         </ol>
@@ -92,7 +108,8 @@ export function RoomsAdmin() {
   );
 }
 
-function RoomRow({ room }: { room: Room }) {
+/** Name and device count with rename/delete in the row menu; `children` are the move buttons, hidden while renaming. */
+function RoomRow({ room, children }: { room: Room; children: ReactNode }) {
   const update = useUpdateRoom();
   const remove = useDeleteRoom();
   const toast = useToast();
@@ -126,18 +143,22 @@ function RoomRow({ room }: { room: Room }) {
     );
   }
   return (
-    <div className="item-main grow">
-      <strong>{room.name}</strong>
-      <span className="muted">
-        {room.deviceCount} {room.deviceCount === 1 ? 'Gerät' : 'Geräte'} ·{' '}
-        <button type="button" className="link" onClick={() => setEditing(true)}>
-          umbenennen
-        </button>{' '}
-        ·{' '}
-        <button type="button" className="link danger-link" onClick={removeRoom}>
-          löschen
-        </button>
-      </span>
-    </div>
+    <>
+      <div className="item-main grow">
+        <strong>{room.name}</strong>
+      </div>
+      <StatusBadge>
+        {room.deviceCount} {room.deviceCount === 1 ? 'Gerät' : 'Geräte'}
+      </StatusBadge>
+      {children}
+      <RowMenu label={`Aktionen für ${room.name}`}>
+        <MenuItem icon="edit" onSelect={() => setEditing(true)}>
+          Umbenennen
+        </MenuItem>
+        <MenuItem icon="delete" danger disabled={remove.isPending} onSelect={removeRoom}>
+          Löschen
+        </MenuItem>
+      </RowMenu>
+    </>
   );
 }

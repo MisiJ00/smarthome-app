@@ -1,35 +1,51 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Button, Card, ErrorText, Field, Muted, Screen, Title, useToast } from '../components/ui';
-import { useMe, useNotifications } from '../lib/api';
+import { palettes } from '@smarthome/theme';
+
+import { Icon } from '../components/Icon';
+import { AppText, Button, Card, ErrorText, Field, IconCircle, Muted, Screen, ScreenHeader, useToast, type Tone } from '../components/ui';
+import { useIsAdmin } from '../lib/admin';
+import { useMe } from '../lib/api';
 import { useAuth } from '../lib/auth';
-import { fontSize, useColors } from '../lib/theme';
+import { modeNames, space, useAppearance, useColors, type IconName } from '../lib/theme';
 import { defaultPhoneName, phoneError, usePhone, useRegisterPhone, useRemovePhone } from '../lib/phone';
 
-/** Account, this phone as approval device, server and sign-out. */
+/** Account, appearance, this phone as approval device, server and sign-out. */
 export default function SettingsScreen() {
   const { state, logout } = useAuth();
   const me = useMe();
+  const c = useColors();
+  const isAdmin = useIsAdmin();
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.content}>
-        <Button title="← Zurück" kind="ghost" onPress={() => router.back()} />
-        <Title>Einstellungen</Title>
+        <ScreenHeader title="Einstellungen" onBack={() => router.back()} />
         <Card>
-          <Muted>Angemeldet als</Muted>
-          <Title>{me.data?.name ?? '…'}</Title>
-          <Muted small>{(me.data?.roles ?? []).join(', ') || 'keine Rolle'}</Muted>
+          <View style={styles.account}>
+            <IconCircle icon="account" tone="accent" size={48} />
+            <View style={styles.flex}>
+              <Muted small>Angemeldet als</Muted>
+              <AppText variant="heading" numberOfLines={1}>
+                {me.data?.name ?? '…'}
+              </AppText>
+              <Muted small>{(me.data?.roles ?? []).join(', ') || 'keine Rolle'}</Muted>
+            </View>
+          </View>
         </Card>
+        <AppearanceRow />
+        {isAdmin && <AdminRows />}
         <PhoneCard />
-        <NotificationCard />
         <Card>
-          <Muted>Server</Muted>
-          <Muted small>{'server' in state ? state.server : ''}</Muted>
+          <SectionTitle icon="room" title="Server" />
+          <AppText variant="small" color={c.muted} selectable>
+            {'server' in state ? state.server : ''}
+          </AppText>
         </Card>
         <View style={styles.actions}>
-          <Button title="Abmelden" kind="danger" onPress={() => void logout()} />
+          <Button title="Abmelden" kind="danger" icon="logout" onPress={() => void logout()} />
         </View>
       </ScrollView>
     </Screen>
@@ -47,7 +63,7 @@ function PhoneCard() {
   const state = phone.data;
   return (
     <Card>
-      <Muted>Freigabe per Fingerabdruck</Muted>
+      <SectionTitle icon="approval" title="Freigabe per Fingerabdruck" tone={state?.kind === 'registered' ? 'ok' : 'accent'} />
       {!state && <Muted small>{phone.isError ? phoneError(phone.error) : 'Prüfe …'}</Muted>}
       {state?.kind === 'unsupported' && <Muted small>{state.reason}</Muted>}
       {state?.kind === 'registered' && (
@@ -85,39 +101,89 @@ function PhoneCard() {
   );
 }
 
-/** Push messages come through the ntfy app (no Google services needed): it subscribes to this user's secret topic. */
-function NotificationCard() {
+/** Admins only: the way to the room and device setup. */
+function AdminRows() {
   const c = useColors();
-  const toast = useToast();
-  const { data } = useNotifications();
-  if (!data?.enabled || !data.server || !data.topic) {
-    return null;
-  }
-  const server = new URL(data.server);
-  const link = `ntfy://${server.host}/${data.topic}${server.protocol === 'http:' ? '?secure=false' : ''}`;
+  const rows: Array<{ icon: IconName; title: string; text: string; href: '/admin/rooms' | '/admin/devices' }> = [
+    { icon: 'room', title: 'Räume', text: 'Anlegen, umbenennen, sortieren', href: '/admin/rooms' },
+    { icon: 'pairing', title: 'Geräte einrichten', text: 'Anlernen, übernehmen, bearbeiten', href: '/admin/devices' },
+  ];
   return (
-    <Card>
-      <Muted>Benachrichtigungen</Muted>
-      <Muted small>
-        Damit du Freigabe-Anfragen auch bei geschlossener App bekommst, installiere die App „ntfy“ (F-Droid oder GitHub) und abonniere dort dein
-        Thema. Tippen auf die Nachricht öffnet diese App.
-      </Muted>
-      <Button
-        title="In ntfy abonnieren"
-        kind="primary"
-        onPress={() => void Linking.openURL(link).catch(() => toast('error', 'Die ntfy-App ist nicht installiert'))}
-      />
-      <Text selectable style={{ color: c.muted, fontSize: fontSize.xs }}>
-        Server: {data.server}
-        {'\n'}Thema: {data.topic}
-      </Text>
-      <Muted small>Das Thema ist geheim, gib es nicht weiter.</Muted>
-    </Card>
+    <View style={styles.group}>
+      <AppText variant="small" weight="semibold" color={c.muted}>
+        Verwaltung
+      </AppText>
+      {rows.map((row) => (
+        <Pressable
+          key={row.href}
+          accessibilityRole="button"
+          accessibilityLabel={row.title}
+          onPress={() => router.push(row.href)}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Card>
+            <View style={styles.section}>
+              <IconCircle icon={row.icon} tone="accent" size={34} />
+              <View style={styles.flex}>
+                <AppText weight="semibold">{row.title}</AppText>
+                <Muted small>{row.text}</Muted>
+              </View>
+              <Icon name="next" size={20} color={c.muted} />
+            </View>
+          </Card>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+/** Row to the appearance screen, with the current colour world and mode. */
+function AppearanceRow() {
+  const c = useColors();
+  const { appearance } = useAppearance();
+  const palette = appearance.palette === 'custom' ? 'Eigene Farben' : palettes[appearance.palette].name;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`Darstellung: ${palette}, ${modeNames[appearance.mode]}`}
+      onPress={() => router.push('/appearance')}
+      style={({ pressed }) => pressed && styles.pressed}
+    >
+      <Card>
+        <View style={styles.section}>
+          <IconCircle icon="appearance" tone="accent" size={34} />
+          <View style={styles.flex}>
+            <AppText weight="semibold">Darstellung</AppText>
+            <Muted small>
+              {palette} · {modeNames[appearance.mode]} · {appearance.style === 'vivid' ? 'Kräftig' : 'Ruhig'}
+            </Muted>
+          </View>
+          <Icon name="next" size={20} color={c.muted} />
+        </View>
+      </Card>
+    </Pressable>
+  );
+}
+
+/** Heading of a settings card: tinted icon and title. */
+function SectionTitle({ icon, title, tone = 'accent' }: { icon: IconName; title: string; tone?: Tone }): ReactNode {
+  return (
+    <View style={styles.section}>
+      <IconCircle icon={icon} tone={tone} size={34} />
+      <AppText weight="semibold" style={styles.flex}>
+        {title}
+      </AppText>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   // Extra room at the bottom so "Abmelden" does not end up under the gesture bar
-  content: { padding: 16, gap: 14, paddingBottom: 48 },
-  actions: { marginTop: 8 },
+  content: { padding: space.lg, gap: space.md, paddingBottom: 48 },
+  actions: { marginTop: space.sm },
+  flex: { flex: 1, minWidth: 0 },
+  account: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  group: { gap: space.sm },
+  section: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
 });

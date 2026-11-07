@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react';
 
+import { actionLabel } from '@smarthome/core';
+
 import { useDevices, useRooms } from '../api';
+import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toasts';
 import { useCreateGrant, useDeleteGrant, useGrants, useUpdateGrant, type CreateGrant } from './adminApi';
-import { Panel, actionLabel, errorText } from './ui';
+import { EmptyState, Panel, SkeletonRows, errorText } from './ui';
 
 type Scope = NonNullable<CreateGrant['scopeType']>;
 type GrantAction = NonNullable<CreateGrant['action']>;
@@ -43,31 +46,56 @@ export function GrantsEditor({ subjectType, subjectId, title }: { subjectType: '
 
   return (
     <Panel title={title}>
-      {grants.data?.length === 0 && <p className="muted">Keine.</p>}
-      <div className="list">
-        {(grants.data ?? []).map((g) => (
-          <div key={g.id} className="item">
-            <div className="item-main">
-              <strong>
-                {actionLabel(g.action ?? '')} · {g.scopeType === 'all' ? 'alle Geräte' : g.scopeType === 'room' ? `Raum ${g.scopeName}` : g.scopeName}
-              </strong>
-            </div>
-            <label className="chip">
-              <input
-                type="checkbox"
-                checked={g.requiresConfirmation ?? false}
-                disabled={g.action === 'unlock' || update.isPending}
-                onChange={(e) => update.mutate({ id: g.id!, requiresConfirmation: e.target.checked }, { onError: (err) => toast('error', errorText(err)) })}
-              />
-              mit Freigabe
-            </label>
-            <button type="button" className="ghost" aria-label="Recht entfernen" onClick={() => remove.mutate(g.id!, { onError: (e) => toast('error', errorText(e)) })}>
-              ✕
-            </button>
-          </div>
-        ))}
-      </div>
-      <form className="item-form wrap" onSubmit={submit}>
+      {grants.isPending && <SkeletonRows rows={2} />}
+      {grants.data?.length === 0 && <EmptyState icon="rights">Keine.</EmptyState>}
+      {(grants.data?.length ?? 0) > 0 && (
+        <div className="table-wrap">
+          <table className="table adm-table">
+            <thead>
+              <tr>
+                <th>Recht</th>
+                <th>Gilt für</th>
+                <th>Freigabe</th>
+                <th>
+                  <span className="adm-visually-hidden">Entfernen</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(grants.data ?? []).map((g) => (
+                <tr key={g.id}>
+                  <td>
+                    <strong>{actionLabel(g.action ?? '')}</strong>
+                  </td>
+                  <td>{g.scopeType === 'all' ? 'alle Geräte' : g.scopeType === 'room' ? `Raum ${g.scopeName}` : g.scopeName}</td>
+                  <td>
+                    <label className="chip">
+                      <input
+                        type="checkbox"
+                        checked={g.requiresConfirmation ?? false}
+                        disabled={g.action === 'unlock' || update.isPending}
+                        onChange={(e) => update.mutate({ id: g.id!, requiresConfirmation: e.target.checked }, { onError: (err) => toast('error', errorText(err)) })}
+                      />
+                      mit Freigabe
+                    </label>
+                  </td>
+                  <td className="adm-cell-end">
+                    <button
+                      type="button"
+                      className="ghost icon-button adm-icon-button adm-icon-danger"
+                      aria-label="Recht entfernen"
+                      onClick={() => remove.mutate(g.id!, { onError: (e) => toast('error', errorText(e)) })}
+                    >
+                      <Icon name="close" size={16} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <form className="item-form wrap adm-toolbar" onSubmit={submit}>
         <select aria-label="Aktion" value={action} onChange={(e) => setAction(e.target.value as GrantAction)}>
           {ACTIONS.map((a) => (
             <option key={a} value={a}>
@@ -102,6 +130,7 @@ export function GrantsEditor({ subjectType, subjectId, title }: { subjectType: '
           mit Freigabe
         </label>
         <button type="submit" className="primary" disabled={create.isPending}>
+          <Icon name="add" size={16} />
           Hinzufügen
         </button>
       </form>

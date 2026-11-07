@@ -1,61 +1,125 @@
+import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useState } from 'react';
 
-import { ApiError } from '@smarthome/api-client';
+import { ApiError, type Confirmation } from '@smarthome/api-client';
 
 import { useDecide, usePendingConfirmations } from '../api';
+import { Icon } from './Icon';
 import { useToast } from './Toasts';
 
 /**
- * Open requests: one's own ("waiting for approval") and those one may decide. Approving with Face ID needs the
- * phone app; here another person approves.
+ * Open requests: one's own ("waiting for approval") and those one may decide, as banners on top. A request of
+ * someone else that one may decide and that comes in after the page loaded (live) also opens a dialog, so it is not
+ * missed; "Später" leaves it in the banner. Requests that were open already when the page loaded only show as banner.
+ * Approving with Face ID needs the phone app; here another person approves.
  */
 export function Confirmations() {
   const { data } = usePendingConfirmations();
   const decide = useDecide();
   const toast = useToast();
   const now = useNow();
+  // Requests whose dialog was closed (or decided) in this visit; they stay in the banner only
+  const [dismissed, setDismissed] = useState<ReadonlySet<number>>(() => new Set());
+  // Requests that were open at the first load; null until the list is there
+  const [initial, setInitial] = useState<ReadonlySet<number> | null>(null);
+  if (data && initial === null) {
+    // Adjusting state while rendering, once (React's pattern for values derived from the first data)
+    setInitial(new Set(data.flatMap((c) => (c.id === undefined ? [] : [c.id]))));
+  }
   const pending = (data ?? []).filter((c) => !c.expiresAt || new Date(c.expiresAt).getTime() > now);
   if (pending.length === 0) {
     return null;
   }
+
+  const dismiss = (id: number) => setDismissed((all) => new Set(all).add(id));
+  const decideOn = (c: Confirmation, approve: boolean) => {
+    if (c.id === undefined) {
+      return;
+    }
+    dismiss(c.id);
+    decide.mutate(
+      { id: c.id, approve },
+      {
+        onSuccess: approve ? () => toast('success', 'Freigegeben') : undefined,
+        onError: (e) => toast('error', message(e)),
+      },
+    );
+  };
+  const asking = pending.find(
+    (c) => c.canDecide && !c.mine && c.id !== undefined && initial !== null && !initial.has(c.id) && !dismissed.has(c.id),
+  );
+
   return (
     <section className="confirmations" aria-label="Offene Freigaben">
       {pending.map((c) => (
-        <div key={c.id} className="confirmation">
-          <div>
-            <strong>{c.deviceName}</strong>: {c.action === 'unlock' ? 'Öffnen' : 'Schalten'}
+        <div key={c.id} className="banner banner-warn confirmation">
+          <span className="banner-icon" aria-hidden="true">
+            <Icon name="approval" />
+          </span>
+          <div className="banner-text">
+            <strong>{c.deviceName}</strong>: {actionText(c)}
             <p className="device-meta">
               {c.mine ? 'Deine Anfrage wartet auf Freigabe' : `Anfrage von ${c.userName}`} · noch {remaining(c.expiresAt, now)}
             </p>
           </div>
           {c.canDecide && c.id !== undefined && (
             <div className="row">
-              <button
-                type="button"
-                disabled={decide.isPending}
-                onClick={() => decide.mutate({ id: c.id!, approve: false }, { onError: (e) => toast('error', message(e)) })}
-              >
+              <button type="button" disabled={decide.isPending} onClick={() => decideOn(c, false)}>
                 Ablehnen
               </button>
-              <button
-                type="button"
-                className="primary"
-                disabled={decide.isPending}
-                onClick={() =>
-                  decide.mutate(
-                    { id: c.id!, approve: true },
-                    { onSuccess: () => toast('success', 'Freigegeben'), onError: (e) => toast('error', message(e)) },
-                  )
-                }
-              >
+              <button type="button" className="primary" disabled={decide.isPending} onClick={() => decideOn(c, true)}>
                 Freigeben
               </button>
             </div>
           )}
         </div>
       ))}
+
+      <Dialog.Root
+        open={asking !== undefined}
+        onOpenChange={(open) => {
+          if (!open && asking?.id !== undefined) {
+            dismiss(asking.id);
+          }
+        }}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className="dialog-overlay" />
+          <Dialog.Content className="dialog">
+            {asking && (
+              <>
+                <span className="dialog-icon" aria-hidden="true">
+                  <Icon name="approval" size={24} />
+                </span>
+                <Dialog.Title>Freigabe angefragt</Dialog.Title>
+                <Dialog.Description>
+                  {asking.userName} möchte <strong>{asking.deviceName}</strong> {asking.action === 'unlock' ? 'öffnen' : 'schalten'}.
+                  <span className="device-meta"> Noch {remaining(asking.expiresAt, now)}.</span>
+                </Dialog.Description>
+                <div className="dialog-actions">
+                  <Dialog.Close asChild>
+                    <button type="button" className="ghost">
+                      Später
+                    </button>
+                  </Dialog.Close>
+                  <button type="button" disabled={decide.isPending} onClick={() => decideOn(asking, false)}>
+                    Ablehnen
+                  </button>
+                  <button type="button" className="primary" disabled={decide.isPending} onClick={() => decideOn(asking, true)}>
+                    Freigeben
+                  </button>
+                </div>
+              </>
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
     </section>
   );
+}
+
+function actionText(c: Confirmation): string {
+  return c.action === 'unlock' ? 'Öffnen' : 'Schalten';
 }
 
 function message(error: unknown): string {

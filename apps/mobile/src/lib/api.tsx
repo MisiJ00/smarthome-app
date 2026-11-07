@@ -28,18 +28,11 @@ export const keys = {
   devices: ['devices'] as const,
   pendingConfirmations: ['confirmations', 'pending'] as const,
   phones: ['phones'] as const,
-  notifications: ['notifications'] as const,
 };
 
 export function useMe() {
   const api = useApi();
   return useQuery({ queryKey: keys.me, queryFn: async () => unwrap(await api.GET('/api/me')) });
-}
-
-/** Where this user subscribes for push messages in the ntfy app (approval requests). */
-export function useNotifications() {
-  const api = useApi();
-  return useQuery({ queryKey: keys.notifications, queryFn: async () => unwrap(await api.GET('/api/me/notifications')) });
 }
 
 export function useRooms() {

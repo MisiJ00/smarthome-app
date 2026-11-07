@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 
+import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toasts';
 import { useCreateRole, useDeleteRole, useRoles } from './adminApi';
 import { GrantsEditor } from './GrantsEditor';
@@ -28,12 +29,18 @@ export function RightsAdmin() {
       <Panel title="Rollen">
         <div className="chips">
           {(roles.data ?? []).map((r) => (
-            <button key={r.id} type="button" className={`chip ${current?.id === r.id ? 'chip-active' : ''}`} onClick={() => setSelected(r.id!)}>
-              {roleLabel(r.name)} <span className="muted">({r.userCount})</span>
+            <button
+              key={r.id}
+              type="button"
+              className={`chip adm-role-chip ${current?.id === r.id ? 'chip-active' : ''}`}
+              aria-pressed={current?.id === r.id}
+              onClick={() => setSelected(r.id!)}
+            >
+              {roleLabel(r.name)} <span className="adm-count">{r.userCount}</span>
             </button>
           ))}
         </div>
-        <form className="item-form" onSubmit={submit}>
+        <form className="item-form adm-toolbar" onSubmit={submit}>
           <input
             aria-label="Neue Rolle"
             placeholder="eigene Rolle, z. B. nachbar"
@@ -44,6 +51,7 @@ export function RightsAdmin() {
             required
           />
           <button type="submit" disabled={create.isPending}>
+            <Icon name="add" size={16} />
             Rolle anlegen
           </button>
         </form>
@@ -70,6 +78,7 @@ export function RightsAdmin() {
                   })
                 }
               >
+                <Icon name="delete" size={16} />
                 Rolle {current.name} löschen
               </button>
             </p>

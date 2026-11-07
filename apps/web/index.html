@@ -6,6 +6,39 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>Smart Home</title>
+    <!-- Ground colour before any script runs (no white flash in dark mode) -->
+    <style>
+      html { background-color: #f3f5f9; }
+      @media (prefers-color-scheme: dark) { html { background-color: #0e131c; } }
+    </style>
+    <!--
+      The stored appearance (smarthome.appearance) before the app loads: data-theme, data-style and the ground colour,
+      so the first frame already has the chosen mode. The ground colours per colour world must match deriveColors in
+      packages/theme (checked by src/firstPaint.test.ts); the app then sets all colours.
+    -->
+    <script id="first-paint">
+      (function () {
+        var grounds = {
+          light: { klassik: '#f3f5f9', neon: '#f5f3fb', sunset: '#fbf6f3', lime: '#f6f8f1', ozean: '#f2f7f9', bubblegum: '#fdf4fa', custom: '#f3f5f9' },
+          dark: { klassik: '#0e131c', neon: '#0c0716', sunset: '#150c0d', lime: '#0b0f08', ozean: '#06111a', bubblegum: '#140a14', custom: '#0e131c' },
+        };
+        try {
+          var a = JSON.parse(localStorage.getItem('smarthome.appearance') || '{}') || {};
+          var mode = a.mode === 'light' || a.mode === 'dark' || a.mode === 'black' ? a.mode : 'system';
+          if (mode === 'system') {
+            mode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          var palette = grounds.light.hasOwnProperty(a.palette) ? a.palette : 'neon';
+          var root = document.documentElement;
+          root.dataset.theme = mode;
+          root.dataset.style = a.style === 'calm' ? 'calm' : 'vivid';
+          root.style.backgroundColor = mode === 'black' ? '#000000' : grounds[mode][palette];
+          root.style.colorScheme = mode === 'light' ? 'light' : 'dark';
+        } catch (e) {
+          // Private mode or a broken value: the fallback above
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

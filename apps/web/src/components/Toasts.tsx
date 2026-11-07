@@ -1,40 +1,62 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, type CSSProperties, type ReactNode } from 'react';
+import { Toaster, toast as sonner } from 'sonner';
+
+import { Icon } from './Icon';
+import { useAppearance } from './theme';
 
 export type ToastKind = 'info' | 'success' | 'error';
 
-interface Toast {
-  id: number;
-  kind: ToastKind;
-  text: string;
-}
+/** Sonner's colour variables, set to the design tokens (inline, so they win over Sonner's own light/dark values). */
+const tokenColors = {
+  '--normal-bg': 'var(--surface)',
+  '--normal-border': 'var(--border)',
+  '--normal-text': 'var(--text)',
+  '--success-bg': 'var(--ok-soft)',
+  '--success-border': 'color-mix(in srgb, var(--ok) 30%, transparent)',
+  '--success-text': 'var(--ok)',
+  '--info-bg': 'var(--accent-soft)',
+  '--info-border': 'color-mix(in srgb, var(--accent) 30%, transparent)',
+  '--info-text': 'var(--text)',
+  '--error-bg': 'var(--danger-soft)',
+  '--error-border': 'color-mix(in srgb, var(--danger) 30%, transparent)',
+  '--error-text': 'var(--danger)',
+  '--border-radius': 'var(--radius-md)',
+} as CSSProperties;
 
-const ToastContext = createContext<(kind: ToastKind, text: string) => void>(() => {});
-
-let nextId = 1;
-
-/** Short notices at the bottom of the screen, e.g. "waiting for approval". */
+/** Short notices at the bottom of the screen, e.g. "waiting for approval". Rendered by Sonner. */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const show = useCallback((kind: ToastKind, text: string) => {
-    const id = nextId++;
-    setToasts((all) => [...all, { id, kind, text }]);
-    setTimeout(() => setToasts((all) => all.filter((t) => t.id !== id)), kind === 'error' ? 7000 : 4000);
-  }, []);
-  const value = useMemo(() => show, [show]);
+  const { scheme } = useAppearance();
   return (
-    <ToastContext.Provider value={value}>
+    <>
       {children}
-      <div className="toasts" role="status" aria-live="polite">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.kind}`}>
-            {t.text}
-          </div>
-        ))}
-      </div>
-    </ToastContext.Provider>
+      <Toaster
+        position="bottom-center"
+        theme={scheme === 'light' ? 'light' : 'dark'}
+        richColors
+        closeButton
+        style={tokenColors}
+        toastOptions={{ className: 'toast' }}
+        icons={{
+          info: <Icon name="info" size={18} />,
+          success: <Icon name="check" size={18} />,
+          error: <Icon name="warning" size={18} />,
+        }}
+        containerAriaLabel="Hinweise"
+      />
+    </>
   );
 }
 
+/** `toast(kind, text)` as before; a thin cover over Sonner, so callers need not know it. */
 export function useToast() {
-  return useContext(ToastContext);
+  return useCallback((kind: ToastKind, text: string) => {
+    const options = { duration: kind === 'error' ? 7000 : 4000 };
+    if (kind === 'success') {
+      sonner.success(text, options);
+    } else if (kind === 'error') {
+      sonner.error(text, options);
+    } else {
+      sonner.info(text, options);
+    }
+  }, []);
 }

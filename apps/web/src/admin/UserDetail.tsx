@@ -1,6 +1,10 @@
 import { useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 
+import { actionLabel } from '@smarthome/core';
+
+import { Icon } from '../components/Icon';
 import { useToast } from '../components/Toasts';
 import {
   useDeleteUser,
@@ -16,7 +20,7 @@ import {
 } from './adminApi';
 import { GrantsEditor } from './GrantsEditor';
 import { SetupCodeCard } from './UsersAdmin';
-import { Panel, actionLabel, errorText, formatTime, roleLabel } from './ui';
+import { EmptyState, MenuItem, MenuSeparator, Panel, RowMenu, SkeletonRows, StatusBadge, errorText, formatTime, roleLabel } from './ui';
 
 /** One user: roles, active, setup code, phones, own grants and what they may do in effect. */
 export function UserDetail() {
@@ -32,7 +36,7 @@ export function UserDetail() {
   const [code, setCode] = useState<SetupCode | null>(null);
 
   if (user.isPending) {
-    return <p className="muted">Lade …</p>;
+    return <SkeletonRows rows={4} />;
   }
   if (!user.data?.user) {
     return <p className="form-errors">Diesen Benutzer gibt es nicht.</p>;
@@ -56,30 +60,40 @@ export function UserDetail() {
   return (
     <div className="stack">
       <p>
-        <Link to="/admin/users">← Alle Benutzer</Link>
+        <Link to="/admin/users" className="adm-back">
+          <ArrowLeft size={16} aria-hidden />
+          Alle Benutzer
+        </Link>
       </p>
       <Panel
-        title={u.name ?? ''}
+        title={
+          <span className="adm-title-badges">
+            {u.name ?? ''}
+            {u.active ? <StatusBadge tone="ok">aktiv</StatusBadge> : <StatusBadge tone="warn">deaktiviert</StatusBadge>}
+          </span>
+        }
+        description={u.machine ? 'Maschinen-User: meldet sich mit API-Token an, kann nicht gelöscht werden.' : [u.username, u.email].filter(Boolean).join(' · ')}
         actions={
           !u.machine && (
-            <div className="row">
-              <button type="button" disabled={newCode.isPending || !u.active} onClick={() => newCode.mutate(id, { onSuccess: setCode, onError: (e) => toast('error', errorText(e)) })}>
+            <RowMenu label={`Aktionen für ${u.name}`}>
+              <MenuItem
+                icon="rights"
+                disabled={newCode.isPending || !u.active}
+                onSelect={() => newCode.mutate(id, { onSuccess: setCode, onError: (e) => toast('error', errorText(e)) })}
+              >
                 Neuer Einrichtungscode
-              </button>
-              <button type="button" onClick={() => setActive(!u.active)} disabled={update.isPending}>
+              </MenuItem>
+              <MenuItem icon={u.active ? 'offline' : 'check'} disabled={update.isPending} onSelect={() => setActive(!u.active)}>
                 {u.active ? 'Deaktivieren' : 'Aktivieren'}
-              </button>
-              <button type="button" className="danger" onClick={removeUser} disabled={remove.isPending}>
+              </MenuItem>
+              <MenuSeparator />
+              <MenuItem icon="delete" danger disabled={remove.isPending} onSelect={removeUser}>
                 Löschen
-              </button>
-            </div>
+              </MenuItem>
+            </RowMenu>
           )
         }
       >
-        <p className="muted">
-          {u.machine ? 'Maschinen-User: meldet sich mit API-Token an, kann nicht gelöscht werden.' : [u.username, u.email].filter(Boolean).join(' · ')}
-          {!u.active && ' · deaktiviert'}
-        </p>
         <fieldset>
           <legend>Rollen</legend>
           <div className="chips">
@@ -103,24 +117,42 @@ export function UserDetail() {
 function EffectivePanel({ id }: { id: number }) {
   const effective = useEffectivePermissions(id);
   const data = effective.data;
+  const devices = data?.devices ?? [];
   return (
     <Panel title="Darf effektiv">
+      {effective.isPending && <SkeletonRows rows={2} />}
       {data?.admin && <p className="muted">Admin: darf alles, außer gesperrten Aktionen.</p>}
-      {data && !data.admin && (data.devices ?? []).length === 0 && <p className="muted">Keine Geräte.</p>}
-      <div className="list">
-        {(data?.devices ?? []).map((d) => (
-          <div key={d.deviceId} className="item">
-            <div className="item-main">
-              <strong>{d.name}</strong>
-              <span className="muted">
-                {(d.permissions ?? [])
-                  .map((p) => actionLabel(p.action ?? '') + (p.requiresConfirmation ? ' (mit Freigabe)' : ''))
-                  .join(', ')}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+      {data && !data.admin && devices.length === 0 && <EmptyState icon="device">Keine Geräte.</EmptyState>}
+      {devices.length > 0 && (
+        <div className="table-wrap">
+          <table className="table adm-table">
+            <thead>
+              <tr>
+                <th>Gerät</th>
+                <th>Rechte</th>
+              </tr>
+            </thead>
+            <tbody>
+              {devices.map((d) => (
+                <tr key={d.deviceId}>
+                  <td>
+                    <strong>{d.name}</strong>
+                  </td>
+                  <td className="adm-cell-wrap">
+                    <span className="adm-badges">
+                      {(d.permissions ?? []).map((p) => (
+                        <StatusBadge key={p.action} tone={p.requiresConfirmation ? 'warn' : undefined} icon={p.requiresConfirmation ? 'approval' : undefined}>
+                          {actionLabel(p.action ?? '') + (p.requiresConfirmation ? ' (mit Freigabe)' : '')}
+                        </StatusBadge>
+                      ))}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Panel>
   );
 }
@@ -131,33 +163,57 @@ function PhonesPanel({ userId }: { userId: number }) {
   const toast = useToast();
   return (
     <Panel title="Handys für Freigaben (Face ID / Fingerabdruck)">
-      {phones.data?.length === 0 && <p className="muted">Keine Handys registriert.</p>}
-      <div className="list">
-        {(phones.data ?? []).map((p) => (
-          <div key={p.id} className="item">
-            <div className="item-main">
-              <strong>{p.name}</strong>
-              <span className="muted">
-                seit {formatTime(p.createdAt)} · zuletzt benutzt {formatTime(p.lastUsed)}
-                {!p.active && ` · gesperrt ${formatTime(p.revokedAt)}`}
-              </span>
-            </div>
-            {p.active && (
-              <button
-                type="button"
-                className="danger"
-                onClick={() => {
-                  if (window.confirm(`${p.name} sperren? Damit kann es keine Freigaben mehr unterschreiben.`)) {
-                    revoke.mutate(p.id!, { onError: (e) => toast('error', errorText(e)) });
-                  }
-                }}
-              >
-                Sperren
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
+      {phones.isPending && <SkeletonRows rows={1} />}
+      {phones.data?.length === 0 && <EmptyState icon="phone">Keine Handys registriert.</EmptyState>}
+      {(phones.data?.length ?? 0) > 0 && (
+        <div className="table-wrap">
+          <table className="table adm-table">
+            <thead>
+              <tr>
+                <th>Handy</th>
+                <th>seit</th>
+                <th>zuletzt benutzt</th>
+                <th>Status</th>
+                <th>
+                  <span className="adm-visually-hidden">Aktionen</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(phones.data ?? []).map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <span className="adm-name">
+                      <Icon name="phone" size={16} className="muted" />
+                      <strong>{p.name}</strong>
+                    </span>
+                  </td>
+                  <td className="muted">{formatTime(p.createdAt)}</td>
+                  <td className="muted">{formatTime(p.lastUsed)}</td>
+                  <td>{p.active ? <StatusBadge tone="ok">aktiv</StatusBadge> : <StatusBadge tone="error">gesperrt {formatTime(p.revokedAt)}</StatusBadge>}</td>
+                  <td className="adm-cell-end">
+                    {p.active && (
+                      <RowMenu label={`Aktionen für ${p.name}`}>
+                        <MenuItem
+                          icon="lock"
+                          danger
+                          onSelect={() => {
+                            if (window.confirm(`${p.name} sperren? Damit kann es keine Freigaben mehr unterschreiben.`)) {
+                              revoke.mutate(p.id!, { onError: (e) => toast('error', errorText(e)) });
+                            }
+                          }}
+                        >
+                          Sperren
+                        </MenuItem>
+                      </RowMenu>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Panel>
   );
 }

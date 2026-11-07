@@ -1,0 +1,501 @@
+/*
+ * Admin area (apps/web/src/admin, without AdminLayout): panels, calm tables, row menus, dialogs, badges, pairing.
+ * Overrides the older .panel / .item / .table / .pairing-active rules in styles.css. Newer tokens (--accent-soft,
+ * --overlay, --shadow-lg, ...) have fallbacks, so it also works with an older theme.
+ */
+
+/* Panels */
+
+.adm-panel {
+  gap: var(--space-lg);
+  padding: var(--space-xl);
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+}
+
+.adm-panel .panel-head {
+  align-items: flex-start;
+}
+
+.adm-panel-title {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.adm-panel h2 {
+  font-size: var(--font-lg);
+  font-weight: 600;
+}
+
+.adm-panel-actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.adm-panel fieldset {
+  gap: var(--space-sm);
+}
+
+.adm-panel legend {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.adm-highlight {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 7%, var(--surface)));
+}
+
+.adm-title-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.adm-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.adm-back:hover {
+  text-decoration: underline;
+}
+
+/* Buttons with icons */
+
+button.adm-icon-button {
+  width: 34px;
+  height: 34px;
+  color: var(--muted);
+  border-radius: var(--radius-sm);
+}
+
+button.adm-icon-button:hover:not(:disabled),
+button.adm-icon-button[data-state='open'] {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+button.adm-icon-danger:hover:not(:disabled) {
+  background: var(--danger-soft, color-mix(in srgb, var(--danger) 12%, var(--surface)));
+  color: var(--danger);
+}
+
+/* Tables: no grid lines, just quiet row separators and a hover tint */
+
+.adm-panel .table-wrap {
+  margin: 0 calc(-1 * var(--space-xl));
+  padding: 0 var(--space-xl);
+}
+
+.adm-table {
+  font-size: var(--font-sm);
+}
+
+.adm-table th {
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.adm-table td {
+  padding: var(--space-md);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  vertical-align: middle;
+}
+
+.adm-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.adm-table tbody tr {
+  transition: background 0.15s;
+}
+
+.adm-table tbody tr:hover {
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+
+.adm-table th:first-child,
+.adm-table td:first-child {
+  padding-left: var(--space-sm);
+}
+
+.adm-cell-end {
+  width: 1%;
+  text-align: right;
+}
+
+.adm-table td.adm-cell-wrap {
+  white-space: normal;
+}
+
+.adm-row-link {
+  cursor: pointer;
+}
+
+.adm-strong-link {
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.adm-row-link:hover .adm-strong-link {
+  color: var(--accent);
+}
+
+.adm-name {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.adm-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.adm-audit td:nth-child(4) {
+  white-space: normal;
+  min-width: 220px;
+}
+
+.adm-time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Lists (rooms, found devices) */
+
+.adm-list {
+  gap: var(--space-sm);
+}
+
+.item.adm-item {
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  transition: border-color 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.sortable .item.adm-item:hover {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+}
+
+.adm-item-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 14%, var(--surface)));
+  color: var(--accent);
+}
+
+.adm-handle {
+  display: inline-flex;
+  color: var(--muted);
+  cursor: grab;
+  letter-spacing: normal;
+}
+
+.adm-arrows {
+  display: flex;
+  gap: 2px;
+}
+
+/* Forms (in dialogs and toolbars) */
+
+.adm-form {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.adm-form > label,
+.adm-form > fieldset {
+  display: grid;
+  gap: 6px;
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.adm-form label.chip {
+  display: inline-flex;
+  font-weight: 400;
+}
+
+.adm-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  padding-top: var(--space-xs);
+}
+
+.adm-toolbar {
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.adm-toolbar input,
+.adm-toolbar select {
+  background: var(--surface);
+}
+
+.adm-toolbar .chip {
+  background: var(--surface);
+}
+
+.adm-role-chip {
+  gap: var(--space-sm);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.adm-count {
+  min-width: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--muted);
+}
+
+.chip-active .adm-count {
+  background: var(--surface);
+  color: var(--accent);
+}
+
+.adm-pager {
+  align-items: center;
+}
+
+.adm-copyable {
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.adm-copyable > .muted {
+  min-width: 40px;
+  font-size: var(--font-sm);
+}
+
+.adm-copyable code {
+  font-size: var(--font-md);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Empty and loading */
+
+.adm-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding: var(--space-xl);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+}
+
+.adm-skeleton {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.adm-skeleton-row {
+  height: 40px;
+}
+
+/* Pairing: countdown ring that empties, pulsing dot */
+
+.adm-pairing-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+}
+
+.adm-pairing-body p {
+  margin: var(--space-xs) 0 0;
+}
+
+.adm-pairing-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.adm-pairing-body > .muted {
+  margin: 0;
+}
+
+.adm-pairing-active {
+  border-color: color-mix(in srgb, var(--ok) 35%, transparent);
+  background: var(--ok-soft, color-mix(in srgb, var(--ok) 8%, var(--surface)));
+}
+
+.adm-countdown {
+  --progress: 1;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ok) calc(var(--progress) * 360deg), color-mix(in srgb, var(--ok) 15%, transparent) 0);
+}
+
+/* the inner disc that makes the conic gradient a ring */
+.adm-countdown-time {
+  display: grid;
+  place-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: var(--font-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-pairing-text strong {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.adm-pairing-text .pulse {
+  width: 10px;
+  height: 10px;
+  margin: 0;
+}
+
+/* Row menu (Radix dropdown) */
+
+.adm-menu {
+  z-index: 50;
+  min-width: 190px;
+  padding: var(--space-xs);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg, 0 12px 32px rgb(16 24 40 / 16%));
+  animation: adm-pop 0.15s ease-out;
+}
+
+.adm-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  color: var(--text);
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.adm-menu-item[data-highlighted] {
+  background: var(--surface-2);
+}
+
+.adm-menu-item[data-disabled] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.adm-menu-item-danger {
+  color: var(--danger);
+}
+
+.adm-menu-item-danger[data-highlighted] {
+  background: var(--danger-soft, color-mix(in srgb, var(--danger) 12%, var(--surface)));
+}
+
+.adm-menu-separator {
+  height: 1px;
+  margin: var(--space-xs) 0;
+  background: var(--border);
+}
+
+/* Dialog: looks like .dialog (styles.css), a bit wider for forms */
+
+.adm-dialog {
+  width: min(520px, calc(100vw - 32px));
+  gap: var(--space-lg);
+}
+
+.adm-dialog h2 {
+  padding-right: 40px;
+}
+
+.adm-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes adm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 560px) {
+  .adm-panel {
+    padding: var(--space-lg);
+  }
+
+  .adm-panel .table-wrap {
+    margin: 0 calc(-1 * var(--space-lg));
+    padding: 0 var(--space-lg);
+  }
+
+  .adm-pairing-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-lg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-menu {
+    animation: none;
+  }
+
+  .adm-countdown,
+  .adm-table tbody tr,
+  .item.adm-item,
+  button.adm-icon-button {
+    transition: none;
+  }
+}

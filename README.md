@@ -55,11 +55,27 @@ Browser flows of Ory Kratos as a single-page app (JSON requests with cookies, se
 2. `GET /sessions/whoami?tokenize_as=smarthome` returns a JWT (5 minutes) for the backend. It is kept in memory only and fetched again 30 seconds before it expires.
 3. Live updates: `POST /api/events/ticket`, then `ws(s)://<host>/api/events?ticket=…`. After every (re)connect the state is loaded again via REST.
 
-Approving with Face ID needs the phone app; in the web interface another person (or an admin) approves.
+## Appearance
+
+Under "Darstellung" (web `/appearance`, app: settings) each person picks a colour world (`klassik`, `neon`, `sunset`, `lime`, `ozean`, `bubblegum` or own colours), a mode (System / Hell / Dunkel / Schwarz) and a style (kräftig = gradients and glow, ruhig = tinted surfaces). The choice is stored locally on the device: web in `localStorage` (`smarthome.appearance`), app in AsyncStorage.
+
+## Dashboard
+
+The home screen is a grid of tiles in the sizes S, M and L. A tap switches the device; long press (app) or right click (web) opens the options of the device. "Bearbeiten" changes order, size and visibility of the tiles and which devices appear in the widget. The layout is stored per user and device (web `localStorage`, app AsyncStorage) under `smarthome.layout.<userId>`; it is not synced to the server.
+
+## Front door
+
+Opening the front door needs the confirmation of the person who asks: they tap "Wirklich öffnen?" and approve with fingerprint / Face ID in the app (signed with the key of the registered phone). Admins cannot approve a request from a person (`403 confirmation.person_request`). A request from the AI assistant is approved by a person who has the right to do so.
+
+There are no notifications (no push, no ntfy): open requests are shown in the app and web interface while they are open.
 
 ## Android app (apps/mobile)
 
 Expo SDK 58 with a local native module (`modules/device-key`): a P-256 key in the Android Keystore that only signs after a fingerprint, for approving requests (`/api/confirmations/{id}/challenge` and `/approve`). The app talks to one server address that serves `/api` and `/kratos` (locally the Vite dev server, later Caddy); in the emulator that is `http://10.0.2.2:5173`. Sign-in uses Kratos's native API flow (session token in the Keystore-backed SecureStore, JWT only in memory). New accounts are set up via the web page from the admin's link.
+
+**Widget "Schnellschalter":** home screen widget (2x2 to 4x2) with up to 4 devices chosen in the dashboard's edit mode. A tap switches the device without opening the app (own session from SecureStore, colours of the chosen colour world); without sign-in it shows "In der App anmelden".
+
+**Emulator:** the app reaches the dev server at `10.0.2.2`, so the web dev server must listen on the loopback address that adb forwards: `npm run dev -w @smarthome/web -- --host 127.0.0.1`. Screenshots of the emulator: `adb emu screenrecord screenshot <folder>`.
 
 Build an APK without an Expo account (needs JDK 21 and the Android SDK, `ANDROID_HOME`):
 
@@ -70,8 +86,6 @@ cd android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,x86
 ```
 
 On Windows the C++ builds create paths over 260 characters: install CMake 3.31.6 (`sdkmanager "cmake;3.31.6"`, its ninja handles long paths) and have Windows long paths enabled; `plugins/with-short-native-build-dir.js` selects that CMake and builds in `.cxx/` of this repo.
-
-Push messages come through the [ntfy](https://ntfy.sh) app (F-Droid/GitHub, no Google services): Settings → "In ntfy abonnieren" subscribes to the user's secret topic on the home server's ntfy.
 
 ## Commands
 

@@ -1,8 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
 
-import { Button, ErrorText, Field, Muted, Screen, Title } from '../components/ui';
+import { AuthScreen, Button, ErrorText, Field, Muted } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { DEV_SERVER, normalizeServer } from '../lib/server';
 
@@ -32,25 +31,20 @@ export default function ServerScreen() {
   };
 
   return (
-    <Screen centered>
-      <View style={styles.box}>
-        <Title>Server</Title>
-        <Muted>Adresse deines Home Servers, wie im Browser, z. B. https://smarthome.example.de.</Muted>
-        <Field
-          label="Adresse"
-          value={url}
-          onChangeText={setUrl}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="url"
-          placeholder="https://…"
-        />
-        <ErrorText>{error}</ErrorText>
-        <Button title="Speichern" kind="primary" busy={busy} disabled={!url.trim()} onPress={() => void save()} />
-        {__DEV__ && <Button title={`Entwicklung: ${DEV_SERVER}`} kind="ghost" onPress={() => setUrl(DEV_SERVER)} />}
-      </View>
-    </Screen>
+    <AuthScreen title="Server">
+      <Muted>Adresse deines Home Servers, wie im Browser, z. B. https://smarthome.example.de.</Muted>
+      <Field
+        label="Adresse"
+        value={url}
+        onChangeText={setUrl}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="url"
+        placeholder="https://…"
+      />
+      <ErrorText>{error}</ErrorText>
+      <Button title="Speichern" kind="primary" busy={busy} disabled={!url.trim()} onPress={() => void save()} />
+      {__DEV__ && <Button title={`Entwicklung: ${DEV_SERVER}`} kind="ghost" onPress={() => setUrl(DEV_SERVER)} />}
+    </AuthScreen>
   );
 }
-
-const styles = StyleSheet.create({ box: { gap: 14 } });

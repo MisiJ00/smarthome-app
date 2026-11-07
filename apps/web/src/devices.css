@@ -1,0 +1,571 @@
+/*
+ * Device page and device cards (HomePage, DeviceCard). Overrides the older .device / .setting / .stepper / .readouts
+ * rules in styles.css. Tokens come from packages/theme; the newer ones (--on-soft, --accent-soft, ...) have a
+ * colour-mix fallback, so the cards also look right with an older theme.
+ */
+
+/* Page head: greeting, summary and room filter */
+
+.home-head {
+  display: grid;
+  gap: 22px;
+}
+
+
+.room-chips {
+  display: flex;
+  gap: var(--space-sm);
+  overflow-x: auto;
+  padding-bottom: var(--space-xxs);
+  scrollbar-width: none;
+}
+
+/* Look of .chip (styles.css); in one scrollable line */
+.room-chip {
+  flex: none;
+}
+
+.room-chip-count {
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* Rooms and the card grid */
+
+.room {
+  display: grid;
+  gap: 14px;
+}
+
+.room h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0;
+  font-size: 21px;
+  font-weight: 740;
+  letter-spacing: -0.025em;
+}
+
+.room h2 .muted {
+  font-size: var(--font-sm);
+  font-weight: 650;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.device-grid {
+  display: grid;
+  /* min(300px, 100%): never wider than a narrow screen */
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  /* cards keep their own height instead of stretching to the tallest in the row */
+  align-items: start;
+  gap: var(--space-lg);
+}
+
+@media (max-width: 560px) {
+  .device-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* The card */
+
+.device {
+  position: relative;
+  display: grid;
+  /* one column that may shrink below its content (long names, sliders), so nothing sticks out of the card */
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+  container-type: inline-size;
+  gap: var(--space-lg);
+  align-content: start;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.device-on {
+  background: var(--on-soft, color-mix(in srgb, var(--on) 14%, var(--surface)));
+  border-color: color-mix(in srgb, var(--on) 30%, transparent);
+}
+
+.device[aria-busy='true'] {
+  opacity: 0.75;
+}
+
+.device-head {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-md);
+  margin: calc(-1 * var(--space-xs));
+  padding: var(--space-xs);
+  border-radius: var(--radius-md);
+}
+
+.device-head-switchable {
+  cursor: pointer;
+}
+
+.device-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--muted);
+  transition: background 0.2s, color 0.2s;
+}
+
+.device-icon-active {
+  background: var(--on);
+  /* amber is light in both modes: dark icon for contrast */
+  color: #151b28;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--on) 40%, transparent);
+}
+
+.device-icon-ok {
+  background: var(--ok-soft, color-mix(in srgb, var(--ok) 15%, var(--surface)));
+  color: var(--ok);
+}
+
+.device-title {
+  flex: 1;
+  min-width: 0;
+}
+
+/* long names wrap to a second line, then end with … */
+.device h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  font-weight: 680;
+  letter-spacing: -0.012em;
+}
+
+.device .device-meta {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--muted);
+}
+
+.device-locked {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--warn-soft, color-mix(in srgb, var(--warn) 14%, var(--surface)));
+  color: var(--warn);
+}
+
+/* Radix Switch */
+
+button.toggle {
+  all: unset;
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 48px;
+  height: 28px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+  cursor: pointer;
+  transition: background 0.15s, box-shadow 0.15s;
+}
+
+button.toggle[data-state='checked'] {
+  background: var(--on);
+  box-shadow: none;
+}
+
+button.toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button.toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.toggle-thumb {
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 25%);
+  transition: transform 0.15s;
+}
+
+.toggle-thumb[data-state='checked'] {
+  transform: translateX(20px);
+}
+
+/* Settings */
+
+.setting {
+  display: grid;
+  gap: var(--space-sm);
+  font-size: var(--font-sm);
+}
+
+.setting > span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--muted);
+}
+
+.setting output {
+  color: var(--text);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.setting-inline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Radix Slider */
+
+.slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 24px;
+  touch-action: none;
+  user-select: none;
+  cursor: pointer;
+}
+
+.slider[data-disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.slider-track {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--muted) 22%, transparent);
+  overflow: hidden;
+}
+
+.slider-range {
+  position: absolute;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.device-on .slider-range {
+  background: var(--on);
+}
+
+/* Colour temperature: the track itself shows warm to cold */
+.slider-color-temp .slider-track {
+  background: linear-gradient(90deg, #ffb35c, #fff1dc 50%, #cfe3ff);
+}
+
+.slider-color-temp .slider-range {
+  background: transparent;
+}
+
+.slider-thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 30%), 0 0 0 1px rgb(0 0 0 / 6%);
+  transition: box-shadow 0.15s;
+}
+
+.slider-thumb:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.slider-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-xs);
+  color: var(--muted);
+}
+
+/* Thermostat: big setpoint between round -/+ */
+
+.setpoint > span {
+  justify-content: center;
+}
+
+.stepper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.setting .setpoint-value {
+  min-width: 120px;
+  text-align: center;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.stepper button.round {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  background: var(--surface-2);
+  color: var(--text);
+  transition: background 0.15s, transform 0.1s;
+}
+
+.stepper button.round:hover:not(:disabled) {
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 14%, var(--surface)));
+  color: var(--accent);
+}
+
+.stepper button.round:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+/* Segmented control (mode) */
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.segmented button.segment {
+  /* as wide as the text needs; too many for one line wrap into the next */
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.segmented button.segment:hover:not(:disabled, .segment-active) {
+  color: var(--text);
+}
+
+/* narrow cards: modes without icons, so they mostly fit in one line */
+@container (max-width: 340px) {
+  .segmented button.segment .icon {
+    display: none;
+  }
+}
+
+.segmented button.segment-active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgb(16 24 40 / 12%);
+}
+
+/* Readings as tiles */
+
+.readouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: var(--space-sm);
+  margin: 0;
+}
+
+.readouts .readout {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.device-on .readouts .readout {
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+}
+
+.readouts dt {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--font-xs);
+  color: var(--muted);
+}
+
+.readouts dd {
+  margin: 0;
+  font-size: var(--font-md);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Locks */
+
+.lock {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.lock .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+}
+
+.lock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.lock-actions button {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Loading and empty */
+
+.device-skeleton {
+  pointer-events: none;
+}
+
+.device-skeleton .skeleton-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.device-skeleton .skeleton-line {
+  height: 12px;
+}
+
+.device-skeleton .skeleton-block {
+  height: 44px;
+  border-radius: var(--radius-md);
+}
+
+.home-empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-sm);
+  padding: 64px var(--space-xl);
+  text-align: center;
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.home-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: var(--space-sm);
+  border-radius: 50%;
+  background: var(--accent-soft, color-mix(in srgb, var(--accent) 14%, var(--surface)));
+  color: var(--accent);
+}
+
+.home-empty h2 {
+  font-size: var(--font-xl);
+}
+
+.home-empty p {
+  max-width: 420px;
+  margin: 0;
+}
+
+.home-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft, color-mix(in srgb, var(--danger) 12%, var(--surface)));
+  color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .device,
+  .device-icon,
+  button.toggle,
+  .toggle-thumb,
+  .segmented button.segment,
+  .stepper button.round {
+    transition: none;
+  }
+}
+
+/* The card as content of the detail sheet (dashboard): the sheet is the surface */
+.device.device-sheet {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* An action an admin locked for this device: why the switch is greyed out */
+.device-locked-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: calc(-1 * var(--space-sm)) 0 0;
+  font-size: var(--font-sm);
+  color: var(--warn);
+}
+
+.confirm-dialog .confirm-device {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-sm);
+}
+
+/* The switch is 28 px high: an invisible frame makes it a 44 px touch target */
+button.toggle::after {
+  content: '';
+  position: absolute;
+  inset: -8px -4px;
+}

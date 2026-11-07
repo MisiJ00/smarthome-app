@@ -13,5 +13,8 @@
   },
   "dependencies": {
     "@smarthome/api-client": "*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.104.5"
   }
 }

@@ -2,6 +2,8 @@
 // with whatever state management they have.
 import type { Confirmation, Device, LiveEvent, Room } from '@smarthome/api-client';
 
+import { controls, deviceTemperature, isDeviceOn } from './capabilities';
+
 export function applyToDevices(devices: Device[], event: LiveEvent): Device[] {
   switch (event.type) {
     case 'device.state':
@@ -82,4 +84,59 @@ export function groupByRoom(rooms: Room[], devices: Device[]): RoomGroup[] {
     groups.push({ room: null, devices: rest });
   }
   return groups;
+}
+
+/** What {@link homeSummary} tells, as data: for UIs that show each fact on its own. */
+export interface HomeFacts {
+	/** Devices that can be switched on and off; 0 means there is nothing to say about "on". */
+	switchable: number;
+	/** How many of them are on. */
+	onCount: number;
+	/** The temperature of the first room that reports one ("20,8 °C"), with the room's name if it has one. */
+	temperature?: { value: string; room?: string };
+}
+
+/** "Alles aus", "1 Gerät an" or "3 Geräte an". */
+export function powerSummary(onCount: number): string {
+	return onCount === 0 ? 'Alles aus' : `${onCount} ${onCount === 1 ? 'Gerät' : 'Geräte'} an`;
+}
+
+/** The facts behind {@link homeSummary}. */
+export function homeFacts(groups: RoomGroup[]): HomeFacts {
+	const switchable = groups.flatMap((g) => g.devices).filter((d) => controls(d.type, d.capabilities).power !== undefined);
+	const facts: HomeFacts = { switchable: switchable.length, onCount: switchable.filter(isDeviceOn).length };
+	for (const group of groups) {
+		const value = group.devices.map(deviceTemperature).find((t) => t !== undefined);
+		if (value !== undefined) {
+			facts.temperature = group.room ? { value, room: group.room.name } : { value };
+			break;
+		}
+	}
+	return facts;
+}
+
+/**
+ * One line about the home, for the head of the device list: "3 Geräte an · 20,8 °C Wohnzimmer" (switched-on devices
+ * and the temperature of the first room that reports one). Without switchable devices there is no "Alles aus"; with
+ * nothing to tell at all the text is empty.
+ */
+export function homeSummary(groups: RoomGroup[]): string {
+	const facts = homeFacts(groups);
+	const parts: string[] = [];
+	if (facts.switchable > 0) {
+		parts.push(powerSummary(facts.onCount));
+	}
+	if (facts.temperature) {
+		const { value, room } = facts.temperature;
+		parts.push(room ? `${value} ${room}` : value);
+	}
+	return parts.join(' · ');
+}
+
+/** "Guten Morgen, Anna" by the time of day, with the first name only. */
+export function greeting(name: string | undefined, now = new Date()): string {
+  const hour = now.getHours();
+  const text = hour < 5 ? 'Gute Nacht' : hour < 11 ? 'Guten Morgen' : hour < 18 ? 'Hallo' : 'Guten Abend';
+  const first = name?.trim().split(/\s+/)[0];
+  return first ? `${text}, ${first}` : text;
 }

@@ -1,25 +1,33 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import * as SliderPrimitive from '@radix-ui/react-slider';
+import * as SwitchPrimitive from '@radix-ui/react-switch';
+import clsx from 'clsx';
 
 /** How long a value the user just set is shown before the device's reported value takes over again. */
 const DRAFT_MS = 2500;
 
-import { ApiError, type Device } from '@smarthome/api-client';
-import { controls, formatValue, isOn, isTemperature, label, type Feature } from '@smarthome/core';
+import { ApiError, type CommandResponse, type Device } from '@smarthome/api-client';
+import { actionLabel, colorTempHint, commandIntent, controls, lockedReason, formatValue, isColorTemp, isOn, isTemperature, label, miredToKelvin, optionLabel, type Feature } from '@smarthome/core';
+import type { IconName } from '@smarthome/theme';
 
-import { useCommand } from '../api';
+import { useCommand, useDecide } from '../api';
+import { ConfirmDialog, type ConfirmState } from '../dashboard/ConfirmDialog';
+import { Icon } from './Icon';
 import { useToast } from './Toasts';
+import '../devices.css';
 
-/** One device with the controls its capabilities and the caller's permissions allow. */
-export function DeviceCard({ device }: { device: Device }) {
+/**
+ * Sends commands to one device (card and dashboard tiles). A locked action gives a short notice ("Ausschalten ist
+ * gesperrt") instead of a refused request; one that needs an approval first asks "Wirklich öffnen?" and then tells to
+ * confirm in the app (render `dialog`); everything else is sent at once, with the backend's message on errors.
+ */
+export function useDeviceCommand(device: Device) {
   const command = useCommand();
+  const decide = useDecide();
   const toast = useToast();
-  const state = device.state ?? {};
-  const c = controls(device.type, device.capabilities);
-  const permissions = new Map((device.permissions ?? []).map((p) => [p.action, p]));
-  const canControl = permissions.has('control');
-  const unlock = permissions.get('unlock');
+  const [confirm, setConfirm] = useState<(ConfirmState & { body: Record<string, unknown> }) | null>(null);
 
-  const send = (body: Record<string, unknown>) => {
+  const post = (body: Record<string, unknown>, onDone?: (result: CommandResponse) => void, onFailed?: () => void) => {
     if (device.id === undefined) {
       return;
     }
@@ -27,47 +35,161 @@ export function DeviceCard({ device }: { device: Device }) {
       { deviceId: device.id, command: body },
       {
         onSuccess: (result) => {
-          if (result.status === 'confirmation_required') {
+          if (onDone) {
+            onDone(result);
+          } else if (result.status === 'confirmation_required') {
             toast('info', `${device.name}: wartet auf Freigabe`);
           }
         },
-        onError: (error) => toast('error', error instanceof ApiError ? error.message : 'Befehl fehlgeschlagen'),
+        onError: (error) => {
+          onFailed?.();
+          toast('error', error instanceof ApiError ? error.message : 'Befehl fehlgeschlagen');
+        },
       },
     );
   };
 
+  const send = (body: Record<string, unknown>) => {
+    const intent = commandIntent(device, body);
+    if (intent.locked) {
+      toast('info', intent.locked);
+      return;
+    }
+    if (intent.requiresConfirmation) {
+      setConfirm({ phase: 'ask', deviceName: device.name ?? 'Gerät', intent, body });
+      return;
+    }
+    post(body);
+  };
+
+  const confirmed = () => {
+    if (!confirm) {
+      return;
+    }
+    setConfirm({ ...confirm, phase: 'sending' });
+    post(
+      confirm.body,
+      (result) => {
+        if (result.status === 'confirmation_required') {
+          setConfirm({
+            ...confirm,
+            phase: 'inApp',
+            ...(result.confirmationId != null ? { confirmationId: result.confirmationId } : {}),
+            ...(result.expiresAt ? { expiresAt: result.expiresAt } : {}),
+          });
+        } else {
+          setConfirm(null);
+          toast('success', confirm.intent.done);
+        }
+      },
+      () => setConfirm(null),
+    );
+  };
+
+  const withdraw = () => {
+    if (confirm?.phase === 'inApp' && confirm.confirmationId !== undefined) {
+      decide.mutate(
+        { id: confirm.confirmationId, approve: false },
+        { onSuccess: () => toast('info', 'Anfrage zurückgezogen'), onError: (error) => toast('error', error instanceof ApiError ? error.message : 'Das hat nicht geklappt') },
+      );
+    }
+    setConfirm(null);
+  };
+
+  const dialog = <ConfirmDialog state={confirm} onConfirm={confirmed} onWithdraw={withdraw} onClose={() => setConfirm(null)} />;
+  return {
+    send,
+    isPending: command.isPending,
+    /** Why this command is locked ("Ausschalten ist gesperrt"), for disabled controls. */
+    lockedFor: (body: Record<string, unknown>) => lockedReason(device, body),
+    /** The "Wirklich …?" dialog; render it next to the controls. */
+    dialog,
+  };
+}
+
+/**
+ * One device with the controls its capabilities and the caller's permissions allow. `variant="sheet"`: the content
+ * of the detail sheet (no card of its own).
+ */
+export function DeviceCard({ device, variant = 'card' }: { device: Device; variant?: 'card' | 'sheet' }) {
+  const command = useDeviceCommand(device);
+  const send = command.send;
+  const state = device.state ?? {};
+  const c = controls(device.type, device.capabilities);
+  const permissions = new Map((device.permissions ?? []).map((p) => [p.action, p]));
+  const canControl = permissions.has('control');
+  const unlock = permissions.get('unlock');
+
   const on = c.power ? isOn(c.power, state) : false;
   const locked = c.lock ? isOn(c.lock, state) : false;
+  const heating = /^heat/i.test(String(state['running_state'] ?? ''));
+  // Greyed out when its next step is locked by an admin; the reason is shown below the head
+  const nextLocked = c.power ? command.lockedFor({ [c.power.property]: on ? c.power.off : c.power.on }) : undefined;
+  // In the sheet the head is just a title (a tap there must not switch); on the card it switches like the switch
+  const canSwitch = variant === 'card' && Boolean(c.power) && canControl && !command.isPending && nextLocked === undefined;
+  const toggle = (next: boolean) => send({ [c.power!.property]: next ? c.power!.on : c.power!.off });
+  const lockedActions = device.lockedActions ?? [];
+  const lockedText = `Gesperrt: ${lockedActions.map(actionLabel).join(', ')}`;
+
+  // The whole head switches, like the switch itself; clicks on the switch are handled by the switch.
+  const onHeadClick = (event: MouseEvent) => {
+    if (canSwitch && !(event.target as Element).closest('button')) {
+      toggle(!on);
+    }
+  };
 
   return (
-    <article className={`device ${on ? 'device-on' : ''}`} aria-busy={command.isPending}>
-      <header className="device-head">
-        <div>
+    <article className={clsx('device', on && 'device-on', variant === 'sheet' && 'device-sheet')} aria-busy={command.isPending}>
+      <header className={clsx('device-head', canSwitch && 'device-head-switchable')} onClick={onHeadClick}>
+        <span className={clsx('device-icon', (on || heating) && 'device-icon-active', c.lock && locked && 'device-icon-ok')}>
+          <Icon name={typeIcon(device.type, locked)} size={22} />
+        </span>
+        <div className="device-title">
           <h3>{device.name}</h3>
-          <p className="device-meta">{typeLabel(device.type)}</p>
+          <p className="device-meta">
+            {typeLabel(device.type)}
+            {c.power && <span className="device-state"> · {on ? 'An' : 'Aus'}</span>}
+          </p>
         </div>
+        {lockedActions.length > 0 && (
+          <span className="badge device-locked" role="img" aria-label={lockedText} title={lockedText}>
+            <Icon name="lock" size={13} />
+          </span>
+        )}
         {c.power && (
           <Switch
             checked={on}
-            disabled={!canControl || command.isPending}
+            disabled={!canControl || command.isPending || nextLocked !== undefined}
             label={`${device.name} ${on ? 'ausschalten' : 'einschalten'}`}
-            onChange={(next) => send({ [c.power!.property]: next ? c.power!.on : c.power!.off })}
+            onChange={toggle}
           />
         )}
       </header>
+      {nextLocked && (
+        <p className="device-locked-note">
+          <Icon name="lock" size={14} />
+          {nextLocked}
+        </p>
+      )}
+      {command.dialog}
 
       {c.lock && (
         <div className="lock">
-          <span className={`badge ${locked ? 'badge-ok' : 'badge-warn'}`}>{locked ? 'Abgeschlossen' : 'Offen'}</span>
-          <div className="row">
+          <span className={clsx('badge', locked ? 'badge-ok' : 'badge-warn')}>
+            <Icon name={locked ? 'lock' : 'unlock'} size={14} />
+            {locked ? 'Abgeschlossen' : 'Offen'}
+          </span>
+          <div className="lock-actions">
             {canControl && (
               <button type="button" disabled={locked || command.isPending} onClick={() => send({ [c.lock!.property]: c.lock!.on })}>
+                <Icon name="lock" size={16} />
                 Abschließen
               </button>
             )}
             {unlock && (
               <button type="button" className="primary" disabled={!locked || command.isPending} onClick={() => send({ [c.lock!.property]: c.lock!.off })}>
-                {unlock.requiresConfirmation ? 'Öffnen anfragen' : 'Öffnen'}
+                <Icon name={unlock.requiresConfirmation ? 'approval' : 'unlock'} size={16} />
+                Öffnen
               </button>
             )}
           </div>
@@ -81,8 +203,11 @@ export function DeviceCard({ device }: { device: Device }) {
       {c.readouts.length > 0 && (
         <dl className="readouts">
           {c.readouts.map((feature) => (
-            <div key={feature.property}>
-              <dt>{label(feature.property)}</dt>
+            <div key={feature.property} className="readout">
+              <dt>
+                <Icon name={readoutIcon(feature.property)} size={14} />
+                {label(feature.property)}
+              </dt>
               <dd>{formatValue(feature, state[feature.property])}</dd>
             </div>
           ))}
@@ -110,22 +235,11 @@ function Setting({
     return <Slider feature={feature} value={typeof value === 'number' ? value : undefined} disabled={disabled} onSend={onSend} />;
   }
   if (feature.kind === 'enum') {
-    return (
-      <label className="setting">
-        <span>{label(feature.property)}</span>
-        <select value={String(value ?? '')} disabled={disabled} onChange={(e) => onSend({ [feature.property]: e.target.value })}>
-          {feature.values.map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </select>
-      </label>
-    );
+    return <Choice feature={feature} value={value} disabled={disabled} onSend={onSend} />;
   }
   if (feature.kind === 'binary') {
     return (
-      <div className="setting">
+      <div className="setting setting-inline">
         <span>{label(feature.property)}</span>
         <Switch
           checked={value === feature.on}
@@ -137,6 +251,58 @@ function Setting({
     );
   }
   return null;
+}
+
+/** More than this many values do not fit side by side; they get a select instead of a segmented control. */
+const MAX_SEGMENTS = 4;
+
+/** A mode and the like: a segmented control for few values, a select for many. */
+function Choice({
+  feature,
+  value,
+  disabled,
+  onSend,
+}: {
+  feature: Extract<Feature, { kind: 'enum' }>;
+  value: unknown;
+  disabled: boolean;
+  onSend: (body: Record<string, unknown>) => void;
+}) {
+  const current = String(value ?? '');
+  if (feature.values.length > MAX_SEGMENTS) {
+    return (
+      <label className="setting">
+        <span>{label(feature.property)}</span>
+        <select value={current} disabled={disabled} onChange={(e) => onSend({ [feature.property]: e.target.value })}>
+          {feature.values.map((v) => (
+            <option key={v} value={v}>
+              {optionLabel(feature.property, v)}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+  return (
+    <div className="setting">
+      <span>{label(feature.property)}</span>
+      <div className="segmented" role="group" aria-label={label(feature.property)}>
+        {feature.values.map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={v === current}
+            className={clsx('segment', v === current && 'segment-active')}
+            disabled={disabled}
+            onClick={() => v !== current && onSend({ [feature.property]: v })}
+          >
+            {modeIcon(v) && <Icon name={modeIcon(v)!} size={15} />}
+            {optionLabel(feature.property, v)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -159,7 +325,7 @@ function useDraft(value: number | undefined) {
 }
 
 /** Sends once the user lets go, not for every step. */
-function Slider({
+export function Slider({
   feature,
   value,
   disabled,
@@ -172,36 +338,59 @@ function Slider({
 }) {
   const min = feature.min ?? 0;
   const max = feature.max ?? 100;
-  const { shown, draft, change, settle } = useDraft(value);
+  const { shown, change, settle } = useDraft(value);
   const local = shown ?? min;
-  const commit = () => {
-    if (draft !== undefined && draft !== value) {
-      onSend({ [feature.property]: draft });
+  const colorTemp = isColorTemp(feature);
+  const commit = (next: number) => {
+    if (next !== value) {
+      onSend({ [feature.property]: next });
     }
     settle();
   };
+  // Colour temperature without a reported value shows "–" (the slider still needs a position)
+  const kelvin = colorTemp && shown !== undefined && shown > 0 ? miredToKelvin(shown) : undefined;
+  const shownText =
+    feature.property === 'brightness'
+      ? `${max > min ? Math.round(((local - min) / (max - min)) * 100) : 100} %`
+      : formatValue(feature, colorTemp ? shown : local);
   return (
-    <label className="setting">
+    <div className="setting">
       <span>
-        {label(feature.property)} <output>{feature.property === 'brightness' ? `${Math.round(((local - min) / (max - min)) * 100)} %` : formatValue(feature, local)}</output>
+        {label(feature.property)}{' '}
+        <output>
+          {shownText}
+          {kelvin !== undefined && <span className="muted"> · {colorTempHint(kelvin)}</span>}
+        </output>
       </span>
-      <input
-        type="range"
+      <SliderPrimitive.Root
+        className={clsx('slider', colorTemp && 'slider-color-temp')}
         min={min}
         max={max}
         step={feature.step ?? 1}
-        value={local}
+        value={[local]}
         disabled={disabled}
-        onChange={(e) => change(Number(e.target.value))}
-        onPointerUp={commit}
-        onKeyUp={commit}
-      />
-    </label>
+        // More mired is warmer: warm on the left, cold on the right, as people expect
+        inverted={colorTemp}
+        onValueChange={([next]) => next !== undefined && change(next)}
+        onValueCommit={([next]) => next !== undefined && commit(next)}
+      >
+        <SliderPrimitive.Track className="slider-track">
+          <SliderPrimitive.Range className="slider-range" />
+        </SliderPrimitive.Track>
+        <SliderPrimitive.Thumb className="slider-thumb" aria-label={label(feature.property)} />
+      </SliderPrimitive.Root>
+      {colorTemp && (
+        <span className="slider-ends" aria-hidden>
+          <span>warm</span>
+          <span>kalt</span>
+        </span>
+      )}
+    </div>
   );
 }
 
 /** +/- in half degrees; sends after a short pause, so several clicks become one command. */
-function Stepper({
+export function Stepper({
   feature,
   value,
   disabled,
@@ -227,26 +416,26 @@ function Stepper({
     }, 600);
   };
   return (
-    <div className="setting">
+    <div className="setting setpoint">
       <span>{label(feature.property)}</span>
       <div className="stepper">
-        <button type="button" aria-label="Kälter" disabled={disabled} onClick={() => change(-step)}>
-          −
+        <button type="button" className="round" aria-label="Kälter" disabled={disabled} onClick={() => change(-step)}>
+          <Icon name="minus" size={20} />
         </button>
-        <output>{formatValue(feature, local)}</output>
-        <button type="button" aria-label="Wärmer" disabled={disabled} onClick={() => change(step)}>
-          +
+        <output className="setpoint-value">{formatValue(feature, local)}</output>
+        <button type="button" className="round" aria-label="Wärmer" disabled={disabled} onClick={() => change(step)}>
+          <Icon name="plus" size={20} />
         </button>
       </div>
     </div>
   );
 }
 
-function Switch({ checked, disabled, label, onChange }: { checked: boolean; disabled: boolean; label: string; onChange: (next: boolean) => void }) {
+export function Switch({ checked, disabled, label, onChange }: { checked: boolean; disabled: boolean; label: string; onChange: (next: boolean) => void }) {
   return (
-    <button type="button" role="switch" aria-checked={checked} aria-label={label} className="switch" disabled={disabled} onClick={() => onChange(!checked)}>
-      <span className="switch-knob" />
-    </button>
+    <SwitchPrimitive.Root className="toggle" checked={checked} disabled={disabled} aria-label={label} onCheckedChange={onChange}>
+      <SwitchPrimitive.Thumb className="toggle-thumb" />
+    </SwitchPrimitive.Root>
   );
 }
 
@@ -258,6 +447,47 @@ const TYPES: Record<string, string> = {
   sensor: 'Sensor',
 };
 
-function typeLabel(type: string | undefined): string {
+export function typeLabel(type: string | undefined): string {
   return TYPES[type ?? ''] ?? type ?? '';
+}
+
+const TYPE_ICONS: Record<string, IconName> = {
+  light: 'light',
+  switch: 'plug',
+  plug: 'plug',
+  thermostat: 'climate',
+  sensor: 'sensor',
+  cover: 'cover',
+};
+
+export function typeIcon(type: string | undefined, locked = true): IconName {
+  if (type === 'lock') {
+    return locked ? 'lock' : 'unlock';
+  }
+  return TYPE_ICONS[type ?? ''] ?? 'device';
+}
+
+const READOUT_ICONS: Record<string, IconName> = {
+  temperature: 'temperature',
+  local_temperature: 'temperature',
+  humidity: 'humidity',
+  battery: 'battery',
+  power: 'power',
+  energy: 'energy',
+  voltage: 'energy',
+  current: 'energy',
+  running_state: 'heat',
+  lock_state: 'lock',
+  occupancy: 'motion',
+  contact: 'contact',
+};
+
+export function readoutIcon(property: string): IconName {
+  return READOUT_ICONS[property] ?? 'info';
+}
+
+const MODE_ICONS: Record<string, IconName> = { off: 'power', auto: 'auto', heat: 'heat', cool: 'cool', fan_only: 'fan' };
+
+function modeIcon(value: string): IconName | undefined {
+  return MODE_ICONS[value.toLowerCase()];
 }

@@ -1,8 +1,11 @@
 import { useState } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+
+import { actionLabel } from '@smarthome/core';
 
 import { useDevices } from '../api';
 import { useAudit, useUsers, type AuditEntry, type AuditFilter } from './adminApi';
-import { Panel, actionLabel, formatTime } from './ui';
+import { EmptyState, Panel, SkeletonRows, StatusBadge, formatTime } from './ui';
 
 const RESULTS: Record<NonNullable<AuditEntry['result']>, string> = {
   sent: 'ausgeführt',
@@ -34,7 +37,7 @@ export function AuditAdmin() {
 
   return (
     <Panel title="Protokoll">
-      <div className="filters">
+      <div className="filters adm-toolbar">
         <select aria-label="Benutzer" value={filter.userId ?? ''} onChange={(e) => set({ userId: e.target.value ? Number(e.target.value) : undefined })}>
           <option value="">Alle Benutzer</option>
           {(users.data ?? []).map((u) => (
@@ -76,8 +79,9 @@ export function AuditAdmin() {
           <input type="date" value={filter.from?.slice(0, 10) ?? ''} onChange={(e) => set({ from: e.target.value ? new Date(e.target.value).toISOString() : undefined })} />
         </label>
       </div>
+      {audit.isPending && <SkeletonRows rows={5} />}
       <div className="table-wrap">
-        <table className="table">
+        <table className="table adm-table adm-audit">
           <thead>
             <tr>
               <th>Zeit</th>
@@ -91,22 +95,21 @@ export function AuditAdmin() {
           <tbody>
             {(audit.data?.items ?? []).map((e) => (
               <tr key={e.id}>
-                <td>{formatTime(e.ts)}</td>
+                <td className="muted adm-time">{formatTime(e.ts)}</td>
                 <td>{e.userName ?? '–'}</td>
                 <td>{e.deviceName ?? '–'}</td>
                 <td title={JSON.stringify(e.params)}>{describe(e)}</td>
-                <td>
-                  <span className={`badge ${resultClass(e.result)}`}>{e.result ? RESULTS[e.result] : ''}</span>
-                </td>
-                <td>{e.via ? VIA[e.via] : ''}</td>
+                <td>{e.result && <StatusBadge tone={resultTone(e.result)}>{RESULTS[e.result]}</StatusBadge>}</td>
+                <td className="muted">{e.via ? VIA[e.via] : ''}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {total === 0 && !audit.isPending && <p className="muted">Keine Einträge.</p>}
-      <div className="row pager">
+      {total === 0 && !audit.isPending && <EmptyState icon="audit">Keine Einträge.</EmptyState>}
+      <div className="row pager adm-pager">
         <button type="button" disabled={filter.page === 0} onClick={() => set({ page: filter.page - 1 })}>
+          <ChevronLeft size={16} aria-hidden />
           Neuer
         </button>
         <span className="muted">
@@ -114,6 +117,7 @@ export function AuditAdmin() {
         </span>
         <button type="button" disabled={filter.page + 1 >= pages} onClick={() => set({ page: filter.page + 1 })}>
           Älter
+          <ChevronRight size={16} aria-hidden />
         </button>
       </div>
     </Panel>
@@ -136,19 +140,19 @@ function describe(entry: AuditEntry): string {
   return `${actionLabel(entry.action ?? '')}${values ? ` (${values})` : ''}${extra}`;
 }
 
-function resultClass(result: AuditEntry['result']): string {
+function resultTone(result: AuditEntry['result']): 'ok' | 'warn' | 'error' | undefined {
   switch (result) {
     case 'sent':
     case 'approved':
-      return 'badge-ok';
+      return 'ok';
     case 'denied':
     case 'locked':
     case 'rejected':
-      return 'badge-error';
+      return 'error';
     case 'pending':
     case 'expired':
-      return 'badge-warn';
+      return 'warn';
     default:
-      return '';
+      return undefined;
   }
 }

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 
 import { unwrap, type components } from '@smarthome/api-client';
+import { createDeviceAdminHooks, pairingKeys, type Discovered, type Pairing } from '@smarthome/core';
 
 import { keys, useApi } from '../api';
 
@@ -12,8 +13,7 @@ export type SetupCode = S['SetupCode'];
 export type Role = S['RoleResponse'];
 export type Grant = S['GrantResponse'];
 export type CreateGrant = S['CreateGrantRequest'];
-export type Discovered = S['DiscoveredDevice'];
-export type Pairing = S['PairingResponse'];
+export type { Discovered, Pairing };
 export type EffectivePermissions = S['EffectivePermissions'];
 export type TrustedDevice = S['TrustedDeviceResponse'];
 export type AuditEntry = S['AuditResponse'];
@@ -29,8 +29,7 @@ export type AuditFilter = {
 };
 
 export const adminKeys = {
-  pairing: ['admin', 'pairing'] as const,
-  discovered: ['admin', 'discovered'] as const,
+  ...pairingKeys,
   users: ['admin', 'users'] as const,
   user: (id: number) => ['admin', 'users', id] as const,
   effective: (id: number) => ['admin', 'users', id, 'effective'] as const,
@@ -51,79 +50,20 @@ function useAdminMutation<A, R>(fn: (args: A) => Promise<R>, invalidate: QueryKe
 
 // Pairing and devices
 
-export function usePairing() {
-  const api = useApi();
-  return useQuery({ queryKey: adminKeys.pairing, queryFn: async (): Promise<Pairing> => unwrap(await api.GET('/api/adapters/z2m/permit-join')) });
-}
-
-export function useStartPairing() {
-  const api = useApi();
-  return useAdminMutation(
-    async (seconds: number) => unwrap(await api.POST('/api/adapters/z2m/permit-join', { body: { seconds } })),
-    [adminKeys.pairing],
-  );
-}
-
-export function useStopPairing() {
-  const api = useApi();
-  return useAdminMutation(async () => unwrap(await api.DELETE('/api/adapters/z2m/permit-join')), [adminKeys.pairing]);
-}
-
-export function useDiscovered() {
-  const api = useApi();
-  return useQuery({ queryKey: adminKeys.discovered, queryFn: async (): Promise<Discovered[]> => unwrap(await api.GET('/api/devices/discovered')) });
-}
-
-export function useAddDevice() {
-  const api = useApi();
-  return useAdminMutation(
-    async (body: S['AddDeviceRequest']) => unwrap(await api.POST('/api/devices', { body })),
-    [adminKeys.discovered, keys.devices, keys.rooms],
-  );
-}
-
-export function useUpdateDevice() {
-  const api = useApi();
-  return useAdminMutation(
-    async ({ id, body }: { id: number; body: S['UpdateDeviceRequest'] }) =>
-      unwrap(await api.PATCH('/api/devices/{id}', { params: { path: { id } }, body })),
-    [keys.devices, keys.rooms],
-  );
-}
-
-export function useRemoveDevice() {
-  const api = useApi();
-  return useAdminMutation(
-    async (id: number) => unwrap(await api.DELETE('/api/devices/{id}', { params: { path: { id } } })),
-    [keys.devices, keys.rooms, adminKeys.discovered],
-  );
-}
-
-// Rooms
-
-export function useCreateRoom() {
-  const api = useApi();
-  return useAdminMutation(async (body: S['CreateRoomRequest']) => unwrap(await api.POST('/api/rooms', { body })), [keys.rooms]);
-}
-
-export function useUpdateRoom() {
-  const api = useApi();
-  return useAdminMutation(
-    async ({ id, body }: { id: number; body: S['UpdateRoomRequest'] }) =>
-      unwrap(await api.PATCH('/api/rooms/{id}', { params: { path: { id } }, body })),
-    [keys.rooms],
-  );
-}
-
-export function useReorderRooms() {
-  const api = useApi();
-  return useAdminMutation(async (roomIds: number[]) => unwrap(await api.PUT('/api/rooms/order', { body: { roomIds } })), [keys.rooms]);
-}
-
-export function useDeleteRoom() {
-  const api = useApi();
-  return useAdminMutation(async (id: number) => unwrap(await api.DELETE('/api/rooms/{id}', { params: { path: { id } } })), [keys.rooms]);
-}
+// Pairing, devices and rooms are shared with the phone app (packages/core/src/admin.ts)
+export const {
+  usePairing,
+  useStartPairing,
+  useStopPairing,
+  useDiscovered,
+  useAddDevice,
+  useUpdateDevice,
+  useRemoveDevice,
+  useCreateRoom,
+  useUpdateRoom,
+  useReorderRooms,
+  useDeleteRoom,
+} = createDeviceAdminHooks({ useApi, keys });
 
 // Users and roles
 

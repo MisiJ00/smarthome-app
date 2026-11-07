@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+import { updateQuickSwitchWidget } from '../widget/widgetTaskHandler';
 import * as kratos from './kratos';
 import { loadServer, saveServer } from './server';
 
@@ -81,6 +82,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     sessionToken.current = null;
     token.current = null;
     await SecureStore.deleteItemAsync(SESSION_KEY);
+    // no device names and states left on the home screen after signing out (or when the session ended)
+    void updateQuickSwitchWidget({ kind: 'signedOut' }).catch(() => {});
   }
 
   useEffect(() => {

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { CloseCodes, unwrap, type Confirmation, type Device, type LiveEvent, type Room } from '@smarthome/api-client';
-import { applyToDevices, applyToPendingConfirmations, applyToRooms } from '@smarthome/core';
+import { applyToDevices, applyToPendingConfirmations, applyToRooms, pairingKeys } from '@smarthome/core';
 
 import { keys, useApi } from './api';
 import { useServer } from './auth';
@@ -38,6 +38,13 @@ export function useLiveEvents(onEvent?: (event: LiveEvent) => void): LiveStatus 
       queries.setQueryData<Confirmation[]>(keys.pendingConfirmations, (old) => (old ? applyToPendingConfirmations(old, event) : old));
       if (event.type === 'permissions.changed') {
         void queries.invalidateQueries();
+      }
+      // pairing and newly found devices (only admins have them loaded; for others this is a no-op)
+      if (event.type === 'pairing.started' || event.type === 'pairing.stopped') {
+        void queries.invalidateQueries({ queryKey: pairingKeys.pairing });
+      }
+      if (event.type === 'device.discovered' || event.type === 'device.added' || event.type === 'device.removed') {
+        void queries.invalidateQueries({ queryKey: pairingKeys.discovered });
       }
       handler.current?.(event);
     };

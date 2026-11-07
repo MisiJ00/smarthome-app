@@ -1,14 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 
 import { AdminLayout } from './admin/AdminLayout';
-import { AuditAdmin } from './admin/AuditAdmin';
-import { DevicesAdmin } from './admin/DevicesAdmin';
-import { RightsAdmin } from './admin/RightsAdmin';
-import { RoomsAdmin } from './admin/RoomsAdmin';
-import { UserDetail } from './admin/UserDetail';
-import { UsersAdmin } from './admin/UsersAdmin';
 import { ApiProvider, useMe } from './api';
 import { AuthProvider, useAuth } from './auth/AuthProvider';
 import { SignedInLayout } from './components/SignedInLayout';
@@ -18,6 +12,15 @@ import { ErrorPage } from './pages/ErrorPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { SetupPage } from './pages/SetupPage';
+
+// The admin pages load only when an admin opens them (their own bundle part); AdminLayout shows a fallback meanwhile
+const AuditAdmin = lazy(() => import('./admin/AuditAdmin').then((m) => ({ default: m.AuditAdmin })));
+const DevicesAdmin = lazy(() => import('./admin/DevicesAdmin').then((m) => ({ default: m.DevicesAdmin })));
+const RightsAdmin = lazy(() => import('./admin/RightsAdmin').then((m) => ({ default: m.RightsAdmin })));
+const RoomsAdmin = lazy(() => import('./admin/RoomsAdmin').then((m) => ({ default: m.RoomsAdmin })));
+const UserDetail = lazy(() => import('./admin/UserDetail').then((m) => ({ default: m.UserDetail })));
+const AppearancePage = lazy(() => import('./pages/AppearancePage').then((m) => ({ default: m.AppearancePage })));
+const UsersAdmin = lazy(() => import('./admin/UsersAdmin').then((m) => ({ default: m.UsersAdmin })));
 
 export function App() {
   const [queries] = useState(
@@ -42,6 +45,14 @@ export function App() {
                   }
                 >
                   <Route path="/" element={<HomePage />} />
+                  <Route
+                    path="/appearance"
+                    element={
+                      <Suspense fallback={<PageLoading />}>
+                        <AppearancePage />
+                      </Suspense>
+                    }
+                  />
                   <Route
                     path="/admin"
                     element={
@@ -72,7 +83,7 @@ export function App() {
 function RequireLogin({ children }: { children: ReactNode }) {
   const { state } = useAuth();
   if (state.status === 'loading') {
-    return <p className="muted center">Lade …</p>;
+    return <PageLoading />;
   }
   if (state.status !== 'signedIn') {
     return <Navigate to="/login" replace />;
@@ -84,10 +95,20 @@ function RequireLogin({ children }: { children: ReactNode }) {
 function RequireAdmin({ children }: { children: ReactNode }) {
   const me = useMe();
   if (me.isPending) {
-    return <p className="muted center">Lade …</p>;
+    return <PageLoading />;
   }
   if (!me.data?.roles?.includes('admin')) {
     return <Navigate to="/" replace />;
   }
   return children;
+}
+
+/** While the session, the own account or a page loads: a calm spinner in the middle, readable for screen readers. */
+function PageLoading() {
+  return (
+    <div className="page-loading" role="status">
+      <span className="spinner" aria-hidden="true" />
+      <span className="muted">Lade …</span>
+    </div>
+  );
 }

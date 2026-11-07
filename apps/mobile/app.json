@@ -14,15 +14,35 @@
     "android": {
       "package": "dev.homeserver.smarthome",
       "adaptiveIcon": {
-        "backgroundColor": "#2F6FDE",
+        "backgroundColor": "#4F46E5",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
       "expo-router",
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "QuickSwitch",
+              "label": "Schnellschalter",
+              "description": "Bis zu vier Geräte mit einem Tipp schalten",
+              "previewImage": "./assets/widget-preview.png",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "maxResizeWidth": "400dp",
+              "maxResizeHeight": "260dp",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
+      ],
       "expo-secure-store",
       "expo-web-browser",
       [
@@ -33,7 +53,26 @@
           }
         }
       ],
-      "./plugins/with-short-native-build-dir"
+      "./plugins/with-short-native-build-dir",
+      "expo-font",
+      [
+        "expo-navigation-bar",
+        {
+          "enforceContrast": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 120,
+          "backgroundColor": "#f3f5f9",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0e131c"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
