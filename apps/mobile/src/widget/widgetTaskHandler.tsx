@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { requestWidgetUpdate, type WidgetTaskHandlerProps } from 'react-native-android-widget';
 
+import { decideTap } from '@smarthome/core';
 import { appearanceColors, DEFAULT_APPEARANCE } from '@smarthome/theme';
 
 import { loadColors, loadWidgetData, widgetApi, type WidgetData } from './data';
@@ -62,7 +63,14 @@ async function toggle(props: WidgetTaskHandlerProps) {
     props.renderWidget(render({ kind: 'signedOut' }));
     return;
   }
-  props.renderWidget(render(await loadWidgetData(api), data.id));
+  // The tile may be older than the server's state: load again first and only send when this same widget still shows
+  // this same device and can be switched (the tap is bound to the ids it was drawn with, never to a position)
+  const fresh = await loadWidgetData(api);
+  if (fresh.kind !== 'ok' || !decideTap({ id: data.id ?? '', deviceId: data.deviceId }, fresh.items).send) {
+    props.renderWidget(render(fresh));
+    return;
+  }
+  props.renderWidget(render(fresh, data.id));
   let failure: 'signedOut' | 'error' | undefined = api ? undefined : 'error';
   if (api) {
     try {

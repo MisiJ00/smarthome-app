@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from '@smarthome/api-client';
 
 import {
+  decideTap,
   homeWidgetCount,
   homescreenItems,
   staleItems,
@@ -168,5 +169,43 @@ describe('the server limits in German', () => {
   it('keeps German messages of the backend and falls back for anything else', () => {
     expect(widgetErrorText(refused('Das Konto ist deaktiviert.'))).toBe('Das Konto ist deaktiviert.');
     expect(widgetErrorText(new Error('boom'))).toBe('Das hat nicht geklappt');
+  });
+});
+
+describe('a tap on a tile drawn earlier', () => {
+  const tapped = { id: '1', deviceId: 7 };
+  const tiles = (...widgets: WidgetData[]) => homescreenItems(widgets);
+
+  it('sends when the same widget still shows the same device and can be switched', () => {
+    expect(decideTap(tapped, tiles(data({})))).toEqual({ send: true });
+  });
+
+  it('does not send when the right is gone', () => {
+    expect(decideTap(tapped, tiles(data({ available: false })))).toEqual({ send: false, reason: 'unavailable' });
+  });
+
+  it('does not send when the widget was deleted, even if another one took its place in the list', () => {
+    expect(decideTap(tapped, tiles(data({ id: 2, targetId: 9 })))).toEqual({ send: false, reason: 'gone' });
+  });
+
+  it('does not send when the widget id points at another device now', () => {
+    expect(decideTap(tapped, tiles(data({ targetId: 9 })))).toEqual({ send: false, reason: 'other-device' });
+  });
+
+  it('does not send for a lock, whatever was drawn before', () => {
+    const lock = data({ kind: 'lock', state: { state: 'LOCK' }, actions: [{ action: 'unlock', requiresConfirmation: true }] });
+    expect(decideTap(tapped, tiles(lock))).toEqual({ send: false, reason: 'not-switchable' });
+  });
+
+  it('does not send when the user may not control the device any more', () => {
+    expect(decideTap(tapped, tiles(data({ actions: [{ action: 'view', requiresConfirmation: false }] })))).toEqual({
+      send: false,
+      reason: 'not-switchable',
+    });
+  });
+
+  it('does not send when the widget moved out of the four tiles', () => {
+    const others = [2, 3, 4, 5].map((id) => data({ id, targetId: id + 10 }));
+    expect(decideTap(tapped, tiles(...others, data({})))).toEqual({ send: false, reason: 'gone' });
   });
 });

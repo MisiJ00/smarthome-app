@@ -194,3 +194,26 @@ export function widgetErrorText(error: unknown, fallback = 'Das hat nicht geklap
   }
   return message || fallback;
 }
+
+/** What a tap on a tile that was drawn earlier leads to, decided against freshly loaded tiles. */
+export type TapDecision = { send: true } | { send: false; reason: 'gone' | 'other-device' | 'unavailable' | 'not-switchable' };
+
+/**
+ * A tap is bound to the widget id and device id the tile had when it was drawn, never to its position. After the tiles
+ * were loaded again a command goes out only if that same widget still points at that same device, is still available
+ * and can be switched from the widget. Locks and every other kind that opens the app never switch from here. The
+ * backend's rights check stays the real limit; this only avoids sending what is already known to be wrong.
+ */
+export function decideTap(tapped: { id: string; deviceId: number }, fresh: HomescreenItem[]): TapDecision {
+  const item = fresh.find((i) => i.id === tapped.id);
+  if (!item) {
+    return { send: false, reason: 'gone' };
+  }
+  if (item.placeholder) {
+    return { send: false, reason: 'unavailable' };
+  }
+  if (item.deviceId !== tapped.deviceId) {
+    return { send: false, reason: 'other-device' };
+  }
+  return item.tap.kind === 'toggle' ? { send: true } : { send: false, reason: 'not-switchable' };
+}
