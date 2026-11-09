@@ -746,6 +746,9 @@ export interface components {
         ReorderRequest: {
             roomIds: number[];
         };
+        WidgetOrderRequest: {
+            widgetIds: number[];
+        };
         CreateUserRequest: {
             email: string;
             username: string;
@@ -1233,7 +1236,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReorderRequest"];
+                "application/json": components["schemas"]["WidgetOrderRequest"];
             };
         };
         responses: {

@@ -9,13 +9,11 @@ import {
   arrangeDevices,
   deviceKey,
   hiddenDevices,
-  MAX_WIDGET,
   moveDevice,
   setGrouping,
   setTileSize,
   tileSize,
   toggleHidden,
-  toggleWidget,
   withFullOrder,
   type DashboardLayout,
   type TileSize,
@@ -23,7 +21,7 @@ import {
 
 import { radius, space, useColors, withAlpha } from '../../lib/theme';
 import { Icon } from '../Icon';
-import { AppText, Button, useToast } from '../ui';
+import { AppText, Button } from '../ui';
 import { tickFeedback } from './haptics';
 import { typeIcon } from './meta';
 import { Segmented } from './Segmented';
@@ -36,7 +34,8 @@ const SIZES: Array<{ value: TileSize; label: string }> = [
 
 /**
  * The edit mode: devices as rows, sorted by holding the handle and dragging (react-native-reorderable-list), per row
- * the size S/M/L, hiding (eye) and "Im Widget" (star, at most four). On top grouping and "Fertig" (saves); hidden
+ * the size S/M/L, hiding (eye) and "Im Widget" (star, at most four; stored on the server at once, not with "Fertig").
+ * On top grouping and "Fertig" (saves); hidden
  * devices under "Ausgeblendet". With grouping by rooms each room is its own list, so a device stays in its room.
  */
 export function EditList({
@@ -46,6 +45,8 @@ export function EditList({
   onChange,
   onDone,
   header,
+  widgetDevices,
+  onToggleWidget,
 }: {
   devices: Device[];
   rooms: Room[];
@@ -53,9 +54,11 @@ export function EditList({
   onChange: (layout: DashboardLayout) => void;
   onDone: () => void;
   header: ReactNode;
+  /** Ids of the devices on the widget (from the server). */
+  widgetDevices: ReadonlySet<string>;
+  onToggleWidget: (id: string) => void;
 }) {
   const c = useColors();
-  const toast = useToast();
   const groups = arrangeDevices(devices, layout, rooms);
   const hidden = hiddenDevices(devices, layout, rooms);
 
@@ -69,13 +72,8 @@ export function EditList({
     onChange(moveDevice(full, ids[from]!, full.order.indexOf(ids[to]!)));
   };
   const star = (id: string) => {
-    const next = toggleWidget(layout, id);
-    if (next === layout) {
-      toast('info', `Höchstens ${MAX_WIDGET} Geräte im Widget`);
-      return;
-    }
     tickFeedback();
-    onChange(next);
+    onToggleWidget(id);
   };
 
   return (
@@ -115,7 +113,7 @@ export function EditList({
                 <EditRow
                   device={item}
                   size={tileSize(layout, item)}
-                  starred={layout.widget.includes(deviceKey(item))}
+                  starred={widgetDevices.has(deviceKey(item))}
                   onSize={(s) => onChange(setTileSize(layout, deviceKey(item), s))}
                   onHide={() => onChange(toggleHidden(layout, deviceKey(item)))}
                   onStar={() => star(deviceKey(item))}

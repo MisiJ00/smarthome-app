@@ -2,7 +2,10 @@ import { FlexWidget, SvgWidget, TextWidget, type ColorProp } from 'react-native-
 
 import type { ThemeColors } from '@smarthome/theme';
 
-import type { WidgetData, WidgetItem } from './data';
+import type { HomescreenItem } from '@smarthome/core';
+
+import { typeIcon } from '../components/devices/meta';
+import type { WidgetData } from './data';
 import { iconSvg } from './icons';
 
 /** Name of the widget in app.json (plugin react-native-android-widget) and in the task handler. */
@@ -46,19 +49,22 @@ export function QuickSwitchWidget({ data, colors, busyId }: { data: WidgetData; 
   );
 }
 
-function Tile({ item, colors, busy }: { item: WidgetItem; colors: ThemeColors; busy: boolean }) {
+function Tile({ item, colors, busy }: { item: HomescreenItem; colors: ThemeColors; busy: boolean }) {
   const on = item.on;
   const fg = on ? colors.accentText : colors.text;
   const muted = on ? colors.accentText : colors.muted;
   const status = busy ? 'schaltet …' : item.status;
+  // a tile without a right (placeholder) does nothing; the rest switches or opens the app
   const click =
     item.tap.kind === 'toggle'
       ? { clickAction: TOGGLE, clickActionData: { id: item.id, deviceId: item.deviceId, command: item.tap.command } }
-      : { clickAction: 'OPEN_APP' };
+      : item.tap.kind === 'open'
+        ? { clickAction: 'OPEN_APP' }
+        : {};
   return (
     <FlexWidget
       {...click}
-      accessibilityLabel={`${item.name}, ${item.status}. ${item.tap.kind === 'toggle' ? `Tippen zum ${on ? 'Ausschalten' : 'Einschalten'}` : 'Tippen öffnet die App'}`}
+      accessibilityLabel={`${item.placeholder ? 'Nicht verfügbar' : item.name}, ${item.status}. ${item.tap.kind === 'toggle' ? `Tippen zum ${on ? 'Ausschalten' : 'Einschalten'}` : item.tap.kind === 'open' ? 'Tippen öffnet die App' : ''}`}
       style={{
         flex: 1,
         height: 'match_parent',
@@ -84,11 +90,11 @@ function Tile({ item, colors, busy }: { item: WidgetItem; colors: ThemeColors; b
             ...(on ? { backgroundColor: hex('#ffffff4d'), borderWidth: 1, borderColor: hex('#ffffff66') } : { backgroundColor: hex(colors.surface2) }),
           }}
         >
-          <SvgWidget svg={iconSvg(item.icon, on ? colors.accentText : colors.muted)} style={{ width: 18, height: 18 }} />
+          <SvgWidget svg={iconSvg(typeIcon(item.deviceType, true), on ? colors.accentText : colors.muted)} style={{ width: 18, height: 18 }} />
         </FlexWidget>
         <TextWidget text={status} maxLines={2} truncate="END" style={{ fontSize: 12, fontWeight: '600', color: hex(muted) }} />
       </FlexWidget>
-      <TextWidget text={item.name} maxLines={2} truncate="END" style={{ width: 'match_parent', fontSize: 14, fontWeight: '700', color: hex(fg) }} />
+      <TextWidget text={item.placeholder ? 'Kein Zugriff' : item.name} maxLines={2} truncate="END" style={{ width: 'match_parent', fontSize: 14, fontWeight: '700', color: hex(fg) }} />
     </FlexWidget>
   );
 }

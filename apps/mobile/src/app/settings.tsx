@@ -36,6 +36,7 @@ export default function SettingsScreen() {
           </View>
         </Card>
         <AppearanceRow />
+        <WidgetsRow />
         {isAdmin && <AdminRows />}
         <PhoneCard />
         <Card>
@@ -160,6 +161,25 @@ function AppearanceRow() {
             <Muted small>
               {palette} · {modeNames[appearance.mode]} · {appearance.style === 'vivid' ? 'Kräftig' : 'Ruhig'}
             </Muted>
+          </View>
+          <Icon name="next" size={20} color={c.muted} />
+        </View>
+      </Card>
+    </Pressable>
+  );
+}
+
+/** Row to the widget screen: which devices are on the home screen widget, in which order. */
+function WidgetsRow() {
+  const c = useColors();
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel="Widget" onPress={() => router.push('/widgets')} style={({ pressed }) => pressed && styles.pressed}>
+      <Card>
+        <View style={styles.section}>
+          <IconCircle icon="device" tone="accent" size={34} />
+          <View style={styles.flex}>
+            <AppText weight="semibold">Widget</AppText>
+            <Muted small>Geräte auf dem Homescreen, Reihenfolge</Muted>
           </View>
           <Icon name="next" size={20} color={c.muted} />
         </View>

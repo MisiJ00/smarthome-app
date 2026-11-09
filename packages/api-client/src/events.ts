@@ -40,6 +40,8 @@ export interface LiveEventData {
   'confirmation.rejected': Schemas['ConfirmationResponse'];
   'confirmation.expired': Schemas['ConfirmationResponse'];
   'permissions.changed': Record<string, never>;
+  /** The person's own widgets were created, changed, reordered or deleted (maybe on another device). */
+  'widgets.changed': Record<string, never>;
   'pairing.started': Pairing;
   'pairing.stopped': Pairing;
   pong: Record<string, never>;

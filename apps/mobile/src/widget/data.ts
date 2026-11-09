@@ -1,37 +1,27 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 
-import { ApiError, createApiClient, unwrap, type ApiClient, type Device } from '@smarthome/api-client';
-import { commandIntent, deviceKey, parseLayout, primaryAction, tileStatus } from '@smarthome/core';
+import { ApiError, createApiClient, unwrap, type ApiClient } from '@smarthome/api-client';
+import { homescreenItems, staleItems, type HomescreenItem } from '@smarthome/core';
 import { appearanceColors, parseAppearance, type ThemeColors } from '@smarthome/theme';
 
-import { typeIcon } from '../components/devices/meta';
 import { whoami } from '../lib/kratos';
 import { loadServer } from '../lib/server';
-import { layoutKey } from '../components/devices/useDashboardLayout';
 
 // Everything the widget needs, read without the app's React tree (the widget's task runs headless): the session
-// from SecureStore, a JWT from Kratos, the devices from the backend, layout and colours from AsyncStorage.
+// from SecureStore, a JWT from Kratos, the widgets from the backend (/api/me/widgets/data) and the colours from
+// AsyncStorage. The selection itself lives on the server.
 
 /** Same keys as lib/auth.tsx and lib/theme.ts. */
 const SESSION_KEY = 'smarthome.session';
 const APPEARANCE_KEY = 'smarthome.appearance';
-
-export interface WidgetItem {
-  id: string;
-  deviceId: number;
-  name: string;
-  status: string;
-  icon: ReturnType<typeof typeIcon>;
-  on: boolean;
-  /** "toggle": a tap switches with `command`; "open": opens the app (locks and other actions that need an approval). */
-  tap: { kind: 'toggle'; command: Record<string, unknown> } | { kind: 'open' };
-}
+/** The last tiles drawn (names and states, nothing secret), for when the server cannot be reached. */
+const LAST_TILES_KEY = 'smarthome.widget.last';
 
 export type WidgetData =
   | { kind: 'signedOut' }
   | { kind: 'error'; colors: { light: ThemeColors; dark: ThemeColors } }
-  | { kind: 'ok'; items: WidgetItem[]; colors: { light: ThemeColors; dark: ThemeColors } };
+  | { kind: 'ok'; items: HomescreenItem[]; colors: { light: ThemeColors; dark: ThemeColors } };
 
 /** A client of the backend with a fresh JWT for the stored session; null without (a valid) login, throws when Kratos is unreachable. */
 export async function widgetApi(): Promise<ApiClient | null> {
@@ -52,28 +42,29 @@ export async function loadColors() {
   return { light: appearanceColors(appearance, false).colors, dark: appearanceColors(appearance, true).colors };
 }
 
-/** What a device looks like on the widget and what a tap does. */
-export function toItem(device: Device): WidgetItem {
-  const action = primaryAction(device);
-  // the door and anything else that needs "Wirklich …?" and the fingerprint is done in the app
-  const tap =
-    action.kind === 'toggle' && !commandIntent(device, action.command).requiresConfirmation && !commandIntent(device, action.command).locked
-      ? ({ kind: 'toggle', command: action.command } as const)
-      : ({ kind: 'open' } as const);
-  return {
-    id: deviceKey(device),
-    deviceId: device.id ?? 0,
-    name: device.name ?? 'Gerät',
-    status: tileStatus(device),
-    icon: typeIcon(device.type, true),
-    on: action.kind === 'toggle' && action.on,
-    tap,
-  };
+/** Remembers the tiles that were just drawn; a failing write only means no offline fallback. */
+export async function rememberTiles(items: HomescreenItem[]): Promise<void> {
+  await AsyncStorage.setItem(LAST_TILES_KEY, JSON.stringify(items)).catch(() => undefined);
+}
+
+/** Forgets them (signing out): no device names left behind. */
+export async function forgetTiles(): Promise<void> {
+  await AsyncStorage.removeItem(LAST_TILES_KEY).catch(() => undefined);
+}
+
+async function lastTiles(): Promise<HomescreenItem[] | undefined> {
+  try {
+    const raw = JSON.parse((await AsyncStorage.getItem(LAST_TILES_KEY)) ?? 'null') as unknown;
+    return Array.isArray(raw) ? (raw as HomescreenItem[]).slice(0, 4) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
- * Loads the up to four widget devices (`layout.widget`, in that order) with their current state. Pass `api` when the
- * caller already has a client (saves a round trip to Kratos); without it one is made from the stored session.
+ * Loads the tiles: the person's widgets from the server in its order, the first four the widget can draw. Pass `api`
+ * when the caller already has a client (saves a round trip to Kratos). When the server cannot be reached the last
+ * known tiles come back as "Offline" (no state, no switching); without any, an error notice.
  */
 export async function loadWidgetData(api?: ApiClient | null): Promise<WidgetData> {
   const colors = await loadColors();
@@ -82,14 +73,16 @@ export async function loadWidgetData(api?: ApiClient | null): Promise<WidgetData
     if (!client) {
       return { kind: 'signedOut' };
     }
-    const me = unwrap(await client.GET('/api/me'));
-    const layout = parseLayout(await AsyncStorage.getItem(layoutKey(me.id ?? 0)));
-    const devices = unwrap(await client.GET('/api/devices', {}));
-    const byId = new Map(devices.map((d) => [deviceKey(d), d]));
-    const items = layout.widget.map((id) => byId.get(id)).filter((d): d is Device => d !== undefined).map(toItem);
+    const data = unwrap(await client.GET('/api/me/widgets/data'));
+    const items = homescreenItems(data.widgets);
+    void rememberTiles(items);
     return { kind: 'ok', items, colors };
   } catch (e) {
     // a rejected session is "signed out", everything else (network, server) a temporary error
-    return e instanceof ApiError && e.status === 401 ? { kind: 'signedOut' } : { kind: 'error', colors };
+    if (e instanceof ApiError && e.status === 401) {
+      return { kind: 'signedOut' };
+    }
+    const last = await lastTiles();
+    return last && last.length > 0 ? { kind: 'ok', items: staleItems(last), colors } : { kind: 'error', colors };
   }
 }

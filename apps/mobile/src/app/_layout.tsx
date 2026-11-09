@@ -98,6 +98,7 @@ function Screens() {
         <Stack.Screen name="index" />
         <Stack.Screen name="settings" />
         <Stack.Screen name="appearance" />
+        <Stack.Screen name="widgets" />
         <Stack.Screen name="admin/rooms" />
         <Stack.Screen name="admin/devices" />
         <Stack.Screen name="admin/users" />

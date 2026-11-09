@@ -52,3 +52,5 @@ Reihenfolge: Web zuerst, dann App (inkl. Android-Homescreen-Widget).
 Web: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`, `react-colorful`, `motion` (Animationen; reduced-motion respektieren).
 App: `react-native-reanimated`, `react-native-gesture-handler`, `react-native-reorderable-list`, `reanimated-color-picker`, `expo-linear-gradient`,
 `@react-native-async-storage/async-storage`, `react-native-android-widget`.
+
+> Update 9.11.: the widget selection now lives on the server (`/api/me/widgets`), not in `layout.widget`; see README.

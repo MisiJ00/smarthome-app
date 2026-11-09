@@ -3,11 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { CloseCodes, unwrap, type Confirmation, type Device, type LiveEvent, type Room } from '@smarthome/api-client';
-import { applyToDevices, applyToPendingConfirmations, applyToRooms, pairingKeys } from '@smarthome/core';
+import { applyToDevices, applyToPendingConfirmations, applyToRooms, pairingKeys, widgetDeviceIds, type ServerWidget } from '@smarthome/core';
 
 import { keys, useApi } from './api';
 import { useServer } from './auth';
 import { webSocketUrl } from './server';
+import { widgetKeys } from './widgets';
 
 export type LiveStatus = 'connecting' | 'live' | 'offline';
 
@@ -31,6 +32,7 @@ export function useLiveEvents(onEvent?: (event: LiveEvent) => void): LiveStatus 
     let retry: ReturnType<typeof setTimeout> | undefined;
     let attempt = 0;
     let stopped = false;
+    let widgetRefresh: ReturnType<typeof setTimeout> | undefined;
 
     const apply = (event: LiveEvent) => {
       queries.setQueryData<Device[]>(keys.devices, (old) => (old ? applyToDevices(old, event) : old));
@@ -38,6 +40,19 @@ export function useLiveEvents(onEvent?: (event: LiveEvent) => void): LiveStatus 
       queries.setQueryData<Confirmation[]>(keys.pendingConfirmations, (old) => (old ? applyToPendingConfirmations(old, event) : old));
       if (event.type === 'permissions.changed') {
         void queries.invalidateQueries();
+      }
+      // The widgets changed on another device (or an admin changed what the person may see): load them again
+      if (event.type === 'widgets.changed') {
+        void queries.invalidateQueries({ queryKey: ['widgets'] });
+      }
+      // The state of a device on the widget changed: its tile is drawn from the server's data, so ask again (not for every
+      // reading, a second after the last one)
+      if (event.type === 'device.state') {
+        const onWidget = widgetDeviceIds(queries.getQueryData<ServerWidget[]>(widgetKeys.list));
+        if (onWidget.has(String(event.data.deviceId))) {
+          clearTimeout(widgetRefresh);
+          widgetRefresh = setTimeout(() => void queries.invalidateQueries({ queryKey: widgetKeys.data }), 1000);
+        }
       }
       // pairing and newly found devices (only admins have them loaded; for others this is a no-op)
       if (event.type === 'pairing.started' || event.type === 'pairing.stopped') {

@@ -9,8 +9,14 @@ import {
   greeting,
   groupByRoom,
   homeFacts,
+  homescreenItems,
+  homeWidgetCount,
+  MAX_HOME_WIDGETS,
   pruneLayout,
   tileSize,
+  widgetDeviceIds,
+  widgetErrorText,
+  widgetsOfDevice,
   withFullOrder,
   type DashboardLayout,
   type RoomGroup,
@@ -31,6 +37,7 @@ import { useIsAdmin } from '../lib/admin';
 import { useDevices, useMe, useRooms } from '../lib/api';
 import { useLiveEvents, type LiveStatus } from '../lib/live';
 import { fonts, radius, space, useAppearance, useColors, withAlpha } from '../lib/theme';
+import { useAddWidget, useRemoveWidgets, useWidgetData, useWidgets, useWidgetTakeover } from '../lib/widgets';
 import { useWidgetSync } from '../widget/useWidgetSync';
 
 /** Filter value of the devices without room (rooms have numeric ids). */
@@ -71,8 +78,31 @@ export default function HomeScreen() {
     [toast],
   );
   const live = useLiveEvents(onEvent);
-  // the home screen widget follows live changes, stars and colours
-  useWidgetSync(devices.data, layout, loaded, useAppearance().appearance);
+  // The widgets live on the server: the stars of the edit mode and the order are theirs, the home screen widget draws
+  // from the server's data (and follows live changes, new colours and the person's rights)
+  const widgets = useWidgets();
+  const widgetData = useWidgetData();
+  const addWidget = useAddWidget();
+  const removeWidgets = useRemoveWidgets();
+  useWidgetTakeover(me.data?.id, layout, loaded, save, devices.data);
+  useWidgetSync(widgetData.data ? homescreenItems(widgetData.data) : undefined, useAppearance().appearance);
+  const toggleWidget = (id: string) => {
+    const device = (devices.data ?? []).find((d) => deviceKey(d) === id);
+    if (!device || device.id === undefined) {
+      return;
+    }
+    const existing = widgetsOfDevice(widgets.data, device.id);
+    if (existing.length > 0) {
+      removeWidgets.mutate(
+        existing.flatMap((w) => (w.id === undefined ? [] : [w.id])),
+        { onError: (e) => toast('error', widgetErrorText(e)) },
+      );
+    } else if (homeWidgetCount(widgets.data) >= MAX_HOME_WIDGETS) {
+      toast('info', `Höchstens ${MAX_HOME_WIDGETS} Geräte im Widget`);
+    } else {
+      addWidget.mutate(device, { onError: (e) => toast('error', widgetErrorText(e)) });
+    }
+  };
   const roomList = rooms.data ?? [];
   const deviceList = devices.data ?? [];
   const hidden = new Set(layout.hidden);
@@ -164,7 +194,16 @@ export default function HomeScreen() {
         </View>
 
         {draft !== null ? (
-          <EditList devices={deviceList} rooms={roomList} layout={draft} onChange={setDraft} onDone={finishEditing} header={intro} />
+          <EditList
+            devices={deviceList}
+            rooms={roomList}
+            layout={draft}
+            onChange={setDraft}
+            onDone={finishEditing}
+            header={intro}
+            widgetDevices={widgetDeviceIds(widgets.data)}
+            onToggleWidget={toggleWidget}
+          />
         ) : (
           <ScrollView
             contentContainerStyle={styles.content}

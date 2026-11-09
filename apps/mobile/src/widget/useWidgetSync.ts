@@ -1,22 +1,20 @@
 import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
-import type { Device } from '@smarthome/api-client';
-import { deviceKey, type DashboardLayout } from '@smarthome/core';
+import type { HomescreenItem } from '@smarthome/core';
 import { appearanceColors, type Appearance } from '@smarthome/theme';
 
-import { toItem } from './data';
+import { rememberTiles } from './data';
 import { updateQuickSwitchWidget } from './widgetTaskHandler';
 
 /**
- * Keeps the home screen widget in step with the app: on live changes of the widget's devices, on layout changes
- * (stars), on a new colour world, and when the app goes to the background. Only redraws when what the widget shows
- * changed (a power reading of another device does not).
+ * Keeps the home screen widget in step with the app: when the tiles the server's data gives (selection, order, state,
+ * availability) or the colour world change, and when the app goes to the background. Only redraws when what the widget
+ * shows changed. `items` is undefined until the data is there (or while the server cannot be reached): then nothing is
+ * drawn over what the widget has.
  */
-export function useWidgetSync(devices: Device[] | undefined, layout: DashboardLayout, loaded: boolean, appearance: Appearance) {
+export function useWidgetSync(items: HomescreenItem[] | undefined, appearance: Appearance) {
   const last = useRef('');
-  const byId = new Map((devices ?? []).map((d) => [deviceKey(d), d]));
-  const items = devices && loaded ? layout.widget.map((id) => byId.get(id)).filter((d): d is Device => d !== undefined).map(toItem) : undefined;
   const signature = items ? JSON.stringify([items, appearance]) : '';
 
   useEffect(() => {
@@ -25,6 +23,7 @@ export function useWidgetSync(devices: Device[] | undefined, layout: DashboardLa
     }
     last.current = signature;
     const colors = { light: appearanceColors(appearance, false).colors, dark: appearanceColors(appearance, true).colors };
+    void rememberTiles(items);
     void updateQuickSwitchWidget({ kind: 'ok', items, colors }).catch(() => {});
     // items and appearance are covered by the signature
     // eslint-disable-next-line react-hooks/exhaustive-deps
