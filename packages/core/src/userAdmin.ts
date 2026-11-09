@@ -20,6 +20,8 @@ export type AuditEntry = S['AuditResponse'];
 export type AuditFilter = {
   userId?: number;
   deviceId?: number;
+  /** What was done, e.g. control, unlock, sso_login (see {@link AUDIT_ACTIONS}). */
+  action?: string;
   result?: NonNullable<AuditEntry['result']>;
   via?: NonNullable<AuditEntry['via']>;
   from?: string;
@@ -68,12 +70,71 @@ export const AUDIT_RESULTS: Record<NonNullable<AuditEntry['result']>, string> = 
   revoked: 'gesperrt (Handy)',
   started: 'gestartet',
   stopped: 'beendet',
+  accepted: 'angenommen',
+  skipped: 'übersprungen',
 };
 
 export const AUDIT_VIA: Record<NonNullable<AuditEntry['via']>, string> = { web: 'Web', app: 'App', widget: 'Widget', ki: 'KI', system: 'System' };
 
+/** The kinds of entries one can filter for, as the backend names them. */
+export const AUDIT_ACTIONS: Record<string, string> = {
+  control: 'Schalten',
+  unlock: 'Aufschließen',
+  configure: 'Einrichten',
+  trusted_device: 'Geräte für Freigaben',
+  permit_join: 'Anlernmodus',
+  sso_login: 'SSO-Anmeldung',
+  sso_consent: 'SSO-Zustimmung',
+  sso_logout: 'SSO-Abmeldung',
+};
+
+const SSO_REASONS: Record<string, string> = {
+  deactivated: 'Konto deaktiviert',
+  machine: 'Maschinen-Konto',
+  wrong_account: 'falsches Konto',
+  login_required: 'Anmeldung nötig',
+  trusted: 'vertrauenswürdiger Dienst',
+  remembered: 'schon erlaubt',
+};
+
+const SSO_SCOPES: Record<string, string> = {
+  openid: 'Identität',
+  profile: 'Name',
+  email: 'E-Mail',
+  offline_access: 'angemeldet bleiben',
+};
+
+/** Sign-ins, consents and logouts for other services (SSO), as one German line. */
+function ssoDescription(entry: AuditEntry): string | undefined {
+  const params = entry.params ?? {};
+  const service = String(params['clientName'] || params['clientId'] || 'einem Dienst');
+  const reason = SSO_REASONS[String(params['reason'] ?? '')];
+  const refused = entry.result === 'rejected';
+  const scopes = Array.isArray(params['scopes']) ? (params['scopes'] as unknown[]).map((s) => SSO_SCOPES[String(s)] ?? String(s)).join(', ') : '';
+  switch (entry.action) {
+    case 'sso_login':
+      return refused ? `Anmeldung bei ${service} abgelehnt${reason ? ` (${reason})` : ''}` : `Anmeldung bei ${service}`;
+    case 'sso_consent':
+      if (refused) {
+        return `Zustimmung für ${service} abgelehnt${reason ? ` (${reason})` : ''}`;
+      }
+      if (entry.result === 'skipped') {
+        return `Zustimmung für ${service} übersprungen${reason ? ` (${reason})` : ''}${scopes ? `: ${scopes}` : ''}`;
+      }
+      return `Zustimmung für ${service} erteilt${scopes ? `: ${scopes}` : ''}`;
+    case 'sso_logout':
+      return refused ? `Abmeldung bei ${service} abgelehnt` : `Abmeldung bei ${service}`;
+    default:
+      return undefined;
+  }
+}
+
 /** What an audit entry did, in a short German line. */
 export function auditDescription(entry: AuditEntry): string {
+  const sso = ssoDescription(entry);
+  if (sso) {
+    return sso;
+  }
   const params = entry.params ?? {};
   if (entry.action === 'permit_join') {
     return `Anlernmodus${params['seconds'] ? ` (${String(params['seconds'])} s)` : ''}`;
@@ -94,6 +155,7 @@ export function auditTone(result: AuditEntry['result']): 'ok' | 'warn' | 'error'
   switch (result) {
     case 'sent':
     case 'approved':
+    case 'accepted':
       return 'ok';
     case 'denied':
     case 'locked':

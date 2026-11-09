@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { AUDIT_RESULTS, AUDIT_VIA, auditDescription, auditTone } from '@smarthome/core';
+import { AUDIT_ACTIONS, AUDIT_RESULTS, AUDIT_VIA, auditDescription, auditTone } from '@smarthome/core';
 
 import { useDevices } from '../api';
 import { useAudit, useUsers, type AuditFilter } from './adminApi';
@@ -38,6 +38,14 @@ export function AuditAdmin() {
           {(devices.data ?? []).map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}
+            </option>
+          ))}
+        </select>
+        <select aria-label="Vorgang" value={filter.action ?? ''} onChange={(e) => set({ action: e.target.value || undefined })}>
+          <option value="">Alle Vorgänge</option>
+          {Object.entries(AUDIT_ACTIONS).map(([value, text]) => (
+            <option key={value} value={value}>
+              {text}
             </option>
           ))}
         </select>

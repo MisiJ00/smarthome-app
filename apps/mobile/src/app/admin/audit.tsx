@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText, Badge, Button, Card, Chip, EmptyState, ErrorText, Muted, Screen, ScreenHeader, Skeleton, type Tone } from '../../components/ui';
 import {
+  AUDIT_ACTIONS,
   AUDIT_RESULTS,
   AUDIT_VIA,
   auditDescription,
@@ -42,6 +43,11 @@ export default function AuditAdminScreen() {
         <Filter title="Gerät" all={filter.deviceId === undefined} onAll={() => set({ deviceId: undefined })}>
           {(devices.data ?? []).map((d) => (
             <Chip key={d.id} label={d.name ?? ''} selected={filter.deviceId === d.id} onPress={() => set({ deviceId: d.id })} />
+          ))}
+        </Filter>
+        <Filter title="Vorgang" all={filter.action === undefined} onAll={() => set({ action: undefined })}>
+          {Object.entries(AUDIT_ACTIONS).map(([value, text]) => (
+            <Chip key={value} label={text} selected={filter.action === value} onPress={() => set({ action: value })} />
           ))}
         </Filter>
         <Filter title="Ergebnis" all={filter.result === undefined} onAll={() => set({ result: undefined })}>

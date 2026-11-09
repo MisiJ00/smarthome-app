@@ -8,7 +8,10 @@
 // 2. Trusted service in the same browser: no sign-in and no consent page, straight to the code.
 // 3. Consent refused: the service gets error=access_denied, no code.
 // 4. Logout page of a service: confirm -> back to the service, the Kratos session of the browser is over.
-// Uses the local test account; refuses anything but localhost.
+// 5. Sign-in with a passkey on the sign-in page of another service (virtual authenticator).
+// 6. The audit log: every step above is in it (service, scopes, result, reasons) and holds no code, token or challenge;
+//    the web interface's log page shows the entries in German and the "Vorgang" filter finds them.
+// Uses the local test accounts; refuses anything but localhost.
 import { createHash, randomBytes } from 'node:crypto';
 
 import { backendToken, devCredentials, requireLocal, sleep, startBrowser } from './browser-driver.mjs';
@@ -27,6 +30,7 @@ if (!identifier || !password) {
   process.exit(1);
 }
 const step = (text) => console.log(`- ${text}`);
+const startedAt = new Date().toISOString();
 /** With SCREENSHOT_DIR set, the pages are saved as PNG for the docs. */
 const SHOTS = process.env.SCREENSHOT_DIR;
 const REDIRECT = 'http://localhost:9876/callback';
@@ -200,7 +204,128 @@ try {
   await goto('/');
   await waitFor('login page (Kratos session over)', async () => (await evaluate('location.pathname')) === '/login');
 
-  console.log('OK: SSO with Hydra works (consent, trusted service, refusal, logout).');
+  // 5. Passkey on the sign-in page of another service
+  step('passkey sign-in on the sign-in page of another service');
+  await browser.addAuthenticator();
+  await goto('/login');
+  await fill('input[autocomplete=username]', identifier);
+  await fill('input[type=password]', password);
+  await click('Anmelden');
+  await waitFor('home page', async () => (await evaluate('location.pathname')) === '/');
+  await goto('/account');
+  await waitFor('passkey section', async () => (await pageText()).includes('Passkey hinzufügen'));
+  const passkeys = async () => (await pageText()).split('hinzugefügt am').length - 1;
+  const known = await passkeys();
+  await click('Passkey hinzufügen');
+  await waitFor('new passkey', async () => (await passkeys()) === known + 1);
+  const signOut = () =>
+    evaluate(`fetch('/kratos/self-service/logout/browser', { credentials: 'include' }).then((r) => r.json()).then((j) => fetch('/kratos/self-service/logout?token=' + j.logout_token, { credentials: 'include' }))`);
+  await signOut();
+  const fifth = authorization('dev-sso-trusted');
+  await open(fifth.url);
+  await waitFor('passkey button on the service sign-in page', async () => (await pageText()).includes('Mit Passkey anmelden'));
+  await click('Mit Passkey anmelden');
+  const viaPasskey = await callback('callback after the passkey sign-in');
+  if (!viaPasskey.searchParams.get('code')) {
+    throw new Error(`The passkey sign-in should end with a code, got ${viaPasskey.href}`);
+  }
+  const passkeyToken = await exchange(fifth, viaPasskey.searchParams.get('code'));
+  if (claimsOf(passkeyToken.id_token).sub !== identity.sub) {
+    throw new Error('The passkey sign-in should give the same identity');
+  }
+  // Clean up: remove the passkey made here (the newest, last in the list)
+  await goto('/account');
+  await waitFor('passkey list', async () => (await passkeys()) === known + 1);
+  await evaluate(`(() => {
+    const section = document.querySelector('[aria-labelledby="passkeys-title"]');
+    const buttons = [...section.querySelectorAll('button')].filter((b) => b.innerText.trim() === 'Entfernen');
+    buttons[buttons.length - 1].click();
+  })()`);
+  await waitFor('passkey removed', async () => (await passkeys()) === known);
+  await signOut();
+
+  // 6. The audit log
+  step('audit log: every step is in it, without secrets');
+  const adminJwt = await backendToken(KRATOS, credentials.DEV_ADMIN_IDENTIFIER, credentials.DEV_ADMIN_PASSWORD);
+  const me = await (await fetch(`${BACKEND}/api/me`, { headers: { Authorization: `Bearer ${jwt}` } })).json();
+  const logResponse = await fetch(`${BACKEND}/api/audit?userId=${me.id}&from=${encodeURIComponent(startedAt)}&size=100`, {
+    headers: { Authorization: `Bearer ${adminJwt}` },
+  });
+  const log = await logResponse.json();
+  const entries = log.items.filter((e) => e.action.startsWith('sso_'));
+  const has = (action, result, clientId, extra = () => true) =>
+    entries.some((e) => e.action === action && e.result === result && e.params.clientId === clientId && extra(e));
+  const expected = [
+    ['sso_login', 'accepted', 'dev-sso-client'],
+    ['sso_login', 'accepted', 'dev-sso-trusted'],
+    ['sso_consent', 'accepted', 'dev-sso-client', (e) => ['openid', 'profile', 'email'].every((x) => e.params.scopes.includes(x))],
+    ['sso_consent', 'skipped', 'dev-sso-trusted', (e) => e.params.reason === 'trusted'],
+    ['sso_consent', 'rejected', 'dev-sso-client', (e) => e.params.reason === 'refused'],
+    ['sso_logout', 'accepted', 'dev-sso-trusted', (e) => e.userName === me.name],
+  ];
+  for (const [action, result, clientId, extra] of expected) {
+    if (!has(action, result, clientId, extra)) {
+      throw new Error(`Audit log is missing ${action}/${result} for ${clientId}: ${JSON.stringify(entries.map((e) => [e.action, e.result, e.params.clientId]))}`);
+    }
+  }
+  if (!entries.every((e) => e.params.clientName && e.via)) {
+    throw new Error('Every SSO entry should name the service and the client it came through');
+  }
+  const secrets = [
+    granted.searchParams.get('code'),
+    direct.searchParams.get('code'),
+    viaPasskey.searchParams.get('code'),
+    token.access_token,
+    token.id_token,
+    trustedToken.access_token,
+    passkeyToken.access_token,
+    logoutToken.id_token,
+    loginChallenge,
+    consentChallenge,
+    logoutChallenge,
+  ];
+  const raw = JSON.stringify(entries);
+  for (const secret of secrets) {
+    if (!secret || raw.includes(secret)) {
+      throw new Error('A code, token or challenge must never be in the audit log');
+    }
+  }
+
+  step('audit log page: German lines and the "Vorgang" filter');
+  await goto('/login');
+  await fill('input[autocomplete=username]', credentials.DEV_ADMIN_IDENTIFIER);
+  await fill('input[type=password]', credentials.DEV_ADMIN_PASSWORD);
+  await click('Anmelden');
+  await waitFor('home page', async () => (await evaluate('location.pathname')) === '/');
+  await goto('/admin/audit');
+  await waitFor('log entries', async () => (await pageText()).includes('Anmeldung bei Dev-Testdienst'));
+  const setSelect = (label, value) =>
+    evaluate(`(() => {
+      const e = document.querySelector('select[aria-label="${label}"]');
+      Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(e, ${JSON.stringify(value)});
+      e.dispatchEvent(new Event('change', { bubbles: true }));
+    })()`);
+  await setSelect('Vorgang', 'sso_consent');
+  await waitFor('only consents', async () => {
+    const text = await pageText();
+    return text.includes('Zustimmung für Dev-Testdienst') && !text.includes('Anmeldung bei Dev-Testdienst');
+  });
+  const logPage = await pageText();
+  for (const text of ['erteilt', 'übersprungen', 'vertrauenswürdiger Dienst', 'abgelehnt']) {
+    if (!logPage.includes(text)) {
+      throw new Error(`The log page should show "${text}". Page says: ${logPage.slice(0, 500)}`);
+    }
+  }
+  if (SHOTS) {
+    await setSelect('Vorgang', '');
+    await waitFor('all entries again', async () => (await pageText()).includes('Anmeldung bei Dev-Testdienst'));
+    await send('Emulation.setDeviceMetricsOverride', { width: 1200, height: 800, deviceScaleFactor: 1, mobile: false });
+    await sleep(500);
+    await browser.screenshot(`${SHOTS}/j-01-audit-sso.png`);
+  }
+  await signOut();
+
+  console.log('OK: SSO with Hydra works (consent, trusted service, refusal, logout, passkey, audit log).');
 } catch (error) {
   failed = true;
   console.error(`FAILED: ${error.message}`);

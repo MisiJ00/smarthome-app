@@ -5,6 +5,7 @@ import { createDeviceAdminHooks, createUserAdminHooks } from '@smarthome/core';
 import { keys, useApi, useMe } from './api';
 
 export {
+  AUDIT_ACTIONS,
   AUDIT_RESULTS,
   AUDIT_VIA,
   auditDescription,

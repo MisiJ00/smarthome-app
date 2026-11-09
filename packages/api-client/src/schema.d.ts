@@ -1163,7 +1163,7 @@ export interface components {
                 [key: string]: unknown;
             };
             /** @enum {string} */
-            result?: "sent" | "denied" | "locked" | "pending" | "approved" | "rejected" | "expired" | "registered" | "revoked" | "started" | "stopped";
+            result?: "sent" | "denied" | "locked" | "pending" | "approved" | "rejected" | "expired" | "registered" | "revoked" | "started" | "stopped" | "accepted" | "skipped";
             /** Format: int64 */
             confirmationId?: number;
         };
@@ -1493,7 +1493,9 @@ export interface operations {
     login: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Smarthome-Client"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1517,7 +1519,9 @@ export interface operations {
     rejectConsent: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Smarthome-Client"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -1541,7 +1545,9 @@ export interface operations {
     acceptConsent: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "X-Smarthome-Client"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2394,7 +2400,9 @@ export interface operations {
             query: {
                 challenge: string;
             };
-            header?: never;
+            header?: {
+                "X-Smarthome-Client"?: string;
+            };
             path?: never;
             cookie?: never;
         };
@@ -2521,7 +2529,7 @@ export interface operations {
                 userId?: number;
                 deviceId?: number;
                 action?: string;
-                result?: "sent" | "denied" | "locked" | "pending" | "approved" | "rejected" | "expired" | "registered" | "revoked" | "started" | "stopped";
+                result?: "sent" | "denied" | "locked" | "pending" | "approved" | "rejected" | "expired" | "registered" | "revoked" | "started" | "stopped" | "accepted" | "skipped";
                 via?: "web" | "app" | "widget" | "ki" | "system";
                 from?: string;
                 to?: string;
