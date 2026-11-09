@@ -100,6 +100,10 @@ function Screens() {
         <Stack.Screen name="appearance" />
         <Stack.Screen name="admin/rooms" />
         <Stack.Screen name="admin/devices" />
+        <Stack.Screen name="admin/users" />
+        <Stack.Screen name="admin/user" />
+        <Stack.Screen name="admin/rights" />
+        <Stack.Screen name="admin/audit" />
       </Stack.Protected>
       <Stack.Protected guard={!signedIn && state.status !== 'noServer'}>
         <Stack.Screen name="login" />

@@ -1,27 +1,14 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { actionLabel } from '@smarthome/core';
+import { AUDIT_RESULTS, AUDIT_VIA, auditDescription, auditTone } from '@smarthome/core';
 
 import { useDevices } from '../api';
-import { useAudit, useUsers, type AuditEntry, type AuditFilter } from './adminApi';
+import { useAudit, useUsers, type AuditFilter } from './adminApi';
 import { EmptyState, Panel, SkeletonRows, StatusBadge, formatTime } from './ui';
 
-const RESULTS: Record<NonNullable<AuditEntry['result']>, string> = {
-  sent: 'ausgeführt',
-  denied: 'kein Recht',
-  locked: 'gesperrt',
-  pending: 'wartet auf Freigabe',
-  approved: 'freigegeben',
-  rejected: 'abgelehnt',
-  expired: 'abgelaufen',
-  registered: 'registriert',
-  revoked: 'gesperrt (Handy)',
-  started: 'gestartet',
-  stopped: 'beendet',
-};
-
-const VIA: Record<NonNullable<AuditEntry['via']>, string> = { web: 'Web', app: 'App', widget: 'Widget', ki: 'KI', system: 'System' };
+const RESULTS = AUDIT_RESULTS;
+const VIA = AUDIT_VIA;
 
 const PAGE_SIZE = 50;
 
@@ -98,8 +85,8 @@ export function AuditAdmin() {
                 <td className="muted adm-time">{formatTime(e.ts)}</td>
                 <td>{e.userName ?? '–'}</td>
                 <td>{e.deviceName ?? '–'}</td>
-                <td title={JSON.stringify(e.params)}>{describe(e)}</td>
-                <td>{e.result && <StatusBadge tone={resultTone(e.result)}>{RESULTS[e.result]}</StatusBadge>}</td>
+                <td title={JSON.stringify(e.params)}>{auditDescription(e)}</td>
+                <td>{e.result && <StatusBadge tone={auditTone(e.result)}>{RESULTS[e.result]}</StatusBadge>}</td>
                 <td className="muted">{e.via ? VIA[e.via] : ''}</td>
               </tr>
             ))}
@@ -122,37 +109,4 @@ export function AuditAdmin() {
       </div>
     </Panel>
   );
-}
-
-function describe(entry: AuditEntry): string {
-  const params = entry.params ?? {};
-  if (entry.action === 'permit_join') {
-    return `Anlernmodus${params['seconds'] ? ` (${String(params['seconds'])} s)` : ''}`;
-  }
-  if (entry.action === 'trusted_device') {
-    return `Handy ${String(params['name'] ?? '')}`;
-  }
-  const values = Object.entries(params)
-    .filter(([key]) => !['requestedBy', 'approvedWith'].includes(key))
-    .map(([key, value]) => `${key}: ${String(value)}`)
-    .join(', ');
-  const extra = params['approvedWith'] ? ` · per ${String(params['approvedWith'])}` : '';
-  return `${actionLabel(entry.action ?? '')}${values ? ` (${values})` : ''}${extra}`;
-}
-
-function resultTone(result: AuditEntry['result']): 'ok' | 'warn' | 'error' | undefined {
-  switch (result) {
-    case 'sent':
-    case 'approved':
-      return 'ok';
-    case 'denied':
-    case 'locked':
-    case 'rejected':
-      return 'error';
-    case 'pending':
-    case 'expired':
-      return 'warn';
-    default:
-      return undefined;
-  }
 }

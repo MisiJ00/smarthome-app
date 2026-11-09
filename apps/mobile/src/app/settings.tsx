@@ -101,12 +101,15 @@ function PhoneCard() {
   );
 }
 
-/** Admins only: the way to the room and device setup. */
+/** Admins only: the way to rooms, devices, users, rights and the audit log. */
 function AdminRows() {
   const c = useColors();
-  const rows: Array<{ icon: IconName; title: string; text: string; href: '/admin/rooms' | '/admin/devices' }> = [
+  const rows: Array<{ icon: IconName; title: string; text: string; href: '/admin/rooms' | '/admin/devices' | '/admin/users' | '/admin/rights' | '/admin/audit' }> = [
     { icon: 'room', title: 'Räume', text: 'Anlegen, umbenennen, sortieren', href: '/admin/rooms' },
     { icon: 'pairing', title: 'Geräte einrichten', text: 'Anlernen, übernehmen, bearbeiten', href: '/admin/devices' },
+    { icon: 'account', title: 'Benutzer', text: 'Konten anlegen, Einrichtungscode, Handys sperren', href: '/admin/users' },
+    { icon: 'rights', title: 'Rollen und Rechte', text: 'Wer darf was', href: '/admin/rights' },
+    { icon: 'audit', title: 'Protokoll', text: 'Wer hat wann was gemacht', href: '/admin/audit' },
   ];
   return (
     <View style={styles.group}>

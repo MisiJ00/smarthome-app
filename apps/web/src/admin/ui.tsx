@@ -183,17 +183,4 @@ export function useSecondsLeft(until: string | undefined): number {
   return secondsUntil(until, now);
 }
 
-export function formatTime(iso: string | undefined): string {
-  return iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' }) : '–';
-}
-
-export const ROLE_LABELS: Record<string, string> = {
-  admin: 'Admin',
-  bewohner: 'Bewohner',
-  gast: 'Gast',
-  ki: 'KI',
-};
-
-export function roleLabel(role: string | undefined): string {
-  return ROLE_LABELS[role ?? ''] ?? role ?? '';
-}
+export { formatTime, roleLabel, ROLE_LABELS } from '@smarthome/core';
