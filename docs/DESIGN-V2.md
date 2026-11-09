@@ -54,3 +54,5 @@ App: `react-native-reanimated`, `react-native-gesture-handler`, `react-native-re
 `@react-native-async-storage/async-storage`, `react-native-android-widget`.
 
 > Update 9.11.: the widget selection now lives on the server (`/api/me/widgets`), not in `layout.widget`; see README.
+
+> Update 9.11.: second widget "Einzelgerät" (one device per instance, chosen when adding, stored on the phone by widget id and device id, data from `GET /api/devices/{id}`); see README.

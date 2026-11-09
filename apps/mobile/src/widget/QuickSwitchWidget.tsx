@@ -49,7 +49,8 @@ export function QuickSwitchWidget({ data, colors, busyId }: { data: WidgetData; 
   );
 }
 
-function Tile({ item, colors, busy }: { item: HomescreenItem; colors: ThemeColors; busy: boolean }) {
+/** One tile; also used by the single device widget. `compact`: icon and state only (no room for the name). */
+export function Tile({ item, colors, busy, compact = false }: { item: HomescreenItem; colors: ThemeColors; busy: boolean; compact?: boolean }) {
   const on = item.on;
   const fg = on ? colors.accentText : colors.text;
   const muted = on ? colors.accentText : colors.muted;
@@ -78,7 +79,7 @@ function Tile({ item, colors, busy }: { item: HomescreenItem; colors: ThemeColor
       }}
     >
       {/* icon and state side by side, the name below: fits a tile that is only about 90 dp high */}
-      <FlexWidget style={{ width: 'match_parent', flexDirection: 'row', alignItems: 'center', flexGap: 8 }}>
+      <FlexWidget style={{ width: 'match_parent', flexDirection: compact ? 'column' : 'row', alignItems: compact ? 'flex-start' : 'center', flexGap: compact ? 6 : 8 }}>
         <FlexWidget
           style={{
             width: 34,
@@ -92,14 +93,16 @@ function Tile({ item, colors, busy }: { item: HomescreenItem; colors: ThemeColor
         >
           <SvgWidget svg={iconSvg(typeIcon(item.deviceType, true), on ? colors.accentText : colors.muted)} style={{ width: 18, height: 18 }} />
         </FlexWidget>
-        <TextWidget text={status} maxLines={2} truncate="END" style={{ fontSize: 12, fontWeight: '600', color: hex(muted) }} />
+        <TextWidget text={status} maxLines={compact ? 1 : 2} truncate="END" style={{ fontSize: 12, fontWeight: '600', color: hex(muted) }} />
       </FlexWidget>
-      <TextWidget text={item.placeholder ? 'Kein Zugriff' : item.name} maxLines={2} truncate="END" style={{ width: 'match_parent', fontSize: 14, fontWeight: '700', color: hex(fg) }} />
+      {compact ? null : (
+        <TextWidget text={item.placeholder ? 'Kein Zugriff' : item.name} maxLines={2} truncate="END" style={{ width: 'match_parent', fontSize: 14, fontWeight: '700', color: hex(fg) }} />
+      )}
     </FlexWidget>
   );
 }
 
-function Notice({ colors, title, text }: { colors: ThemeColors; title: string; text: string }) {
+export function Notice({ colors, title, text }: { colors: ThemeColors; title: string; text: string }) {
   return (
     <FlexWidget
       clickAction="OPEN_APP"

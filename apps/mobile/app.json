@@ -39,6 +39,21 @@
               "maxResizeHeight": "340dp",
               "resizeMode": "horizontal|vertical",
               "updatePeriodMillis": 1800000
+            },
+            {
+              "name": "SingleDevice",
+              "label": "Einzelgerät",
+              "description": "Ein Gerät als eigenes Widget, Tipp schaltet",
+              "previewImage": "./assets/widget-preview-single.png",
+              "minWidth": "57dp",
+              "minHeight": "57dp",
+              "targetCellWidth": 2,
+              "targetCellHeight": 1,
+              "maxResizeWidth": "400dp",
+              "maxResizeHeight": "200dp",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000,
+              "widgetFeatures": "reconfigurable"
             }
           ]
         }

@@ -38,6 +38,7 @@ import { useDevices, useMe, useRooms } from '../lib/api';
 import { useLiveEvents, type LiveStatus } from '../lib/live';
 import { fonts, radius, space, useAppearance, useColors, withAlpha } from '../lib/theme';
 import { useAddWidget, useRemoveWidgets, useWidgetData, useWidgets, useWidgetTakeover } from '../lib/widgets';
+import { useSingleWidgetSync } from '../widget/useSingleWidgetSync';
 import { useWidgetSync } from '../widget/useWidgetSync';
 
 /** Filter value of the devices without room (rooms have numeric ids). */
@@ -85,7 +86,9 @@ export default function HomeScreen() {
   const addWidget = useAddWidget();
   const removeWidgets = useRemoveWidgets();
   useWidgetTakeover(me.data?.id, layout, loaded, save, devices.data);
-  useWidgetSync(widgetData.data ? homescreenItems(widgetData.data) : undefined, useAppearance().appearance);
+  const appearance = useAppearance().appearance;
+  useWidgetSync(widgetData.data ? homescreenItems(widgetData.data) : undefined, appearance);
+  useSingleWidgetSync(devices.data, appearance);
   const toggleWidget = (id: string) => {
     const device = (devices.data ?? []).find((d) => deviceKey(d) === id);
     if (!device || device.id === undefined) {

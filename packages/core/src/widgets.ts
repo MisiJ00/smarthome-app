@@ -3,6 +3,8 @@
 // over a selection that was stored on the phone before, and the server's limits in German.
 import { ApiError, type components, type Device } from '@smarthome/api-client';
 
+import { primaryAction, tileStatus } from './dashboard';
+
 type S = components['schemas'];
 export type ServerWidget = S['WidgetResponse'];
 export type WidgetData = S['WidgetData'];
@@ -216,4 +218,35 @@ export function decideTap(tapped: { id: string; deviceId: number }, fresh: Homes
     return { send: false, reason: 'other-device' };
   }
   return item.tap.kind === 'toggle' ? { send: true } : { send: false, reason: 'not-switchable' };
+}
+
+/** The tile of a single device widget when the person may not see the device (or it is gone): neutral, no name, no tap. */
+export function unavailableItem(deviceId: number): HomescreenItem {
+  return { id: String(deviceId), deviceId, placeholder: true, name: '', status: 'Nicht verfügbar', deviceType: 'device', on: false, tap: { kind: 'none' } };
+}
+
+/**
+ * The tile of a single device widget from the device as the device API gives it (GET /api/devices/{id}, which answers
+ * 404 for a device the person may not see). The same rules as for the quick switch tiles: lights, plugs and switches
+ * the person may control switch on a tap, unless the action is locked or needs an approval; locks, thermostats,
+ * sensors and the rest show their value and open the app. Texts from the server are only cut to length.
+ */
+export function deviceItem(device: Device): HomescreenItem {
+  const deviceId = device.id ?? 0;
+  const id = String(deviceId);
+  const status = tileStatus(device);
+  const action = primaryAction(device);
+  const locked = (device.lockedActions ?? []).includes('control');
+  const needsApproval = (device.permissions ?? []).some((p) => p.action === 'control' && p.requiresConfirmation === true);
+  const switchable = action.kind === 'toggle' && !locked && !needsApproval;
+  return {
+    id,
+    deviceId,
+    placeholder: false,
+    name: text(device.name, 60) || 'Gerät',
+    status: status === 'Abgeschlossen' ? 'Zu' : text(status, 40),
+    deviceType: text(device.type, 40) || 'device',
+    on: action.kind === 'toggle' && action.on,
+    tap: switchable ? { kind: 'toggle', command: action.command } : { kind: 'open' },
+  };
 }

@@ -2,7 +2,8 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { forgetTiles } from '../widget/data';
-import { updateQuickSwitchWidget } from '../widget/widgetTaskHandler';
+import { forgetSingleTiles } from '../widget/single';
+import { updateQuickSwitchWidget, updateSingleDeviceWidgets } from '../widget/widgetTaskHandler';
 import * as kratos from './kratos';
 import { loadServer, saveServer } from './server';
 
@@ -85,6 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await SecureStore.deleteItemAsync(SESSION_KEY);
     // no device names and states left on the home screen after signing out (or when the session ended)
     void forgetTiles();
+    // the single device widgets keep their assignment (it is only a device id) but show the sign-in hint
+    void forgetSingleTiles().then(() => updateSingleDeviceWidgets()).catch(() => {});
     void updateQuickSwitchWidget({ kind: 'signedOut' }).catch(() => {});
   }
 

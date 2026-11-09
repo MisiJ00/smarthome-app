@@ -4,6 +4,8 @@ import { ApiError } from '@smarthome/api-client';
 
 import {
   decideTap,
+  deviceItem,
+  unavailableItem,
   homeWidgetCount,
   homescreenItems,
   staleItems,
@@ -207,5 +209,53 @@ describe('a tap on a tile drawn earlier', () => {
   it('does not send when the widget moved out of the four tiles', () => {
     const others = [2, 3, 4, 5].map((id) => data({ id, targetId: id + 10 }));
     expect(decideTap(tapped, tiles(...others, data({})))).toEqual({ send: false, reason: 'gone' });
+  });
+});
+
+describe('tile of a single device widget', () => {
+  const lamp = {
+    id: 6,
+    name: 'Stehlampe',
+    type: 'light',
+    capabilities: { exposes: [{ type: 'light', features: [{ type: 'binary', property: 'state', access: 7, value_on: 'ON', value_off: 'OFF' }] }] },
+    state: { state: 'OFF' },
+    permissions: [{ action: 'view' }, { action: 'control' }],
+    lockedActions: [],
+  } as unknown as import('@smarthome/api-client').Device;
+
+  it('switches a light the person may control', () => {
+    const item = deviceItem(lamp);
+    expect(item).toMatchObject({ id: '6', deviceId: 6, placeholder: false, name: 'Stehlampe', status: 'Aus', on: false });
+    expect(item.tap.kind).toBe('toggle');
+  });
+
+  it('only opens the app when the control action is locked or needs an approval or is not allowed', () => {
+    expect(deviceItem({ ...lamp, lockedActions: ['control'] }).tap.kind).toBe('open');
+    expect(deviceItem({ ...lamp, permissions: [{ action: 'control', requiresConfirmation: true }] }).tap.kind).toBe('open');
+    expect(deviceItem({ ...lamp, permissions: [{ action: 'view' }] }).tap.kind).toBe('open');
+  });
+
+  it('never switches a lock and says Zu', () => {
+    const lock = {
+      id: 5,
+      name: 'Haustür',
+      type: 'lock',
+      capabilities: { exposes: [{ type: 'lock', features: [{ type: 'binary', property: 'state', access: 7, value_on: 'LOCK', value_off: 'UNLOCK' }] }] },
+      state: { state: 'LOCK' },
+      permissions: [{ action: 'view' }, { action: 'control' }, { action: 'unlock' }],
+    } as unknown as import('@smarthome/api-client').Device;
+    const item = deviceItem(lock);
+    expect(item.tap.kind).toBe('open');
+    expect(item.status).toBe('Zu');
+  });
+
+  it('is a neutral tile without name and tap when the device is not visible', () => {
+    expect(unavailableItem(6)).toMatchObject({ id: '6', deviceId: 6, placeholder: true, name: '', tap: { kind: 'none' } });
+  });
+
+  it('takes the same guard as the quick switch: only a switchable, same device is sent', () => {
+    expect(decideTap({ id: '6', deviceId: 6 }, [deviceItem(lamp)])).toEqual({ send: true });
+    expect(decideTap({ id: '6', deviceId: 6 }, [unavailableItem(6)])).toEqual({ send: false, reason: 'unavailable' });
+    expect(decideTap({ id: '6', deviceId: 6 }, [deviceItem({ ...lamp, lockedActions: ['control'] })])).toEqual({ send: false, reason: 'not-switchable' });
   });
 });
