@@ -1809,3 +1809,27 @@ legend {
   justify-content: space-between;
   gap: var(--space-sm);
 }
+
+/* ---------- Sign-in for other services (consent, logout) ---------- */
+
+.oauth-scopes {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  list-style: none;
+}
+
+.oauth-scopes li {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.oauth-actions {
+  display: grid;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}

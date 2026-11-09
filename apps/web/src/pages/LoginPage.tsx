@@ -19,7 +19,8 @@ export function LoginPage() {
   return <Password onDone={refresh} />;
 }
 
-function Password({ onDone }: { onDone: () => Promise<void> }) {
+/** Password (or passkey) step. {@code notice} says why, e.g. for the sign-in of another service. */
+export function Password({ onDone, notice }: { onDone: () => Promise<void>; notice?: string }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
@@ -67,6 +68,7 @@ function Password({ onDone }: { onDone: () => Promise<void> }) {
 
   return (
     <AuthLayout title="Anmelden">
+      {notice && <p>{notice}</p>}
       <form onSubmit={submit} className="form">
         <label>
           E-Mail oder Benutzername
@@ -91,7 +93,7 @@ function Password({ onDone }: { onDone: () => Promise<void> }) {
   );
 }
 
-function SecondFactor({ onDone }: { onDone: () => Promise<void> }) {
+export function SecondFactor({ onDone }: { onDone: () => Promise<void> }) {
   const { logout } = useAuth();
   const [useBackupCode, setUseBackupCode] = useState(false);
   const [code, setCode] = useState('');

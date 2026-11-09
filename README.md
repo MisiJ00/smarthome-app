@@ -37,6 +37,10 @@ creates in the **local** Kratos and backend: `devadmin` (admin) and `erikadev` (
 
 **Production never has test accounts:** nothing in the backend, the migrations or the configuration creates any; there, self-registration is off (`KRATOS_REGISTRATION_ENABLED=false`) and accounts are only created by an admin.
 
+## Sign-in for other services (SSO with Hydra)
+
+Immich, Nextcloud and the like can sign people in with their account here through Ory Hydra (OpenID Connect); Kratos stays the login. Hydra sends the browser to three pages of the web interface: `/oauth/login` (the usual Kratos sign-in, password plus second factor or passkey, then the backend answers Hydra with the person's own JWT), `/oauth/consent` (which service asks for what; skipped for own services marked as trusted) and `/oauth/logout` (confirm, also ends the Kratos session). All texts are German. Setup and security notes: `homeserver-infra/auth/README.md`. Locally `npm run dev:oauth` creates two test clients (localhost only) and `npm run e2e:oauth` runs the whole flow in headless Chrome (authorization code with PKCE, consent, trusted service, refusal, logout; `SCREENSHOT_DIR=docs/screenshots/app-v2` saves the pages, `i-*.png`).
+
 ## Admin area
 
 `/admin`, only visible to admins (the backend checks every request anyway):

@@ -11,6 +11,7 @@ import { AccountPage } from './pages/AccountPage';
 import { ErrorPage } from './pages/ErrorPage';
 import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
+import { OAuthConsentPage, OAuthLoginPage, OAuthLogoutPage } from './pages/OAuthPages';
 import { SetupPage } from './pages/SetupPage';
 
 // The admin pages load only when an admin opens them (their own bundle part); AdminLayout shows a fallback meanwhile
@@ -37,6 +38,9 @@ export function App() {
                 <Route path="/setup" element={<SetupPage />} />
                 <Route path="/account" element={<AccountPage />} />
                 <Route path="/error" element={<ErrorPage />} />
+                <Route path="/oauth/login" element={<OAuthLoginPage />} />
+                <Route path="/oauth/consent" element={<OAuthConsentPage />} />
+                <Route path="/oauth/logout" element={<OAuthLogoutPage />} />
                 <Route
                   element={
                     <RequireLogin>

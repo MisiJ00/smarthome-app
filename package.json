@@ -18,7 +18,9 @@
     "api:update": "npm run update -w @smarthome/api-client",
     "dev:seed": "node scripts/dev-seed.mjs",
     "e2e:passkey": "node scripts/passkey-e2e.mjs",
-    "e2e:approval": "node scripts/approval-e2e.mjs"
+    "e2e:approval": "node scripts/approval-e2e.mjs",
+    "e2e:oauth": "node scripts/oauth-e2e.mjs",
+    "dev:oauth": "node scripts/dev-oauth.mjs"
   },
   "engines": {
     "node": ">=22"

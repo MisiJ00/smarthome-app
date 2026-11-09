@@ -1,7 +1,7 @@
 // A tiny driver for Chrome/Edge headless over the DevTools protocol, for the end-to-end checks against the LOCAL stack.
 // No test framework needed: Node 22+ has fetch and WebSocket built in.
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -54,7 +54,7 @@ export async function startBrowser(base) {
   const port = 9300 + Math.floor(Math.random() * 500);
   const chrome = spawn(
     findChrome(),
-    ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-sandbox', 'about:blank'],
+    ['--headless=new', `--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-sandbox', '--window-size=480,900', 'about:blank'],
     { stdio: 'ignore' },
   );
   let targets;
@@ -70,9 +70,14 @@ export async function startBrowser(base) {
   await new Promise((resolve) => (ws.onopen = resolve));
   let nextId = 0;
   const pending = new Map();
+  const listeners = [];
   ws.onmessage = (message) => {
     const data = JSON.parse(message.data);
-    pending.get(data.id)?.(data);
+    if (data.method) {
+      listeners.forEach((listener) => listener(data.method, data.params));
+    } else {
+      pending.get(data.id)?.(data);
+    }
   };
   const send = (method, params = {}) =>
     new Promise((resolve) => {
@@ -93,6 +98,14 @@ export async function startBrowser(base) {
   const pageText = () => evaluate('document.body.innerText');
   const driver = {
     send,
+    /** Saves a PNG of the page (phone-sized when {@code mobile}) to {@code file}. */
+    async screenshot(file) {
+      mkdirSync(join(file, '..'), { recursive: true });
+      const r = await send('Page.captureScreenshot', { format: 'png' });
+      writeFileSync(file, Buffer.from(r.result.data, 'base64'));
+    },
+    /** Calls back for every DevTools event, e.g. Network.requestWillBeSent. */
+    onEvent: (listener) => listeners.push(listener),
     evaluate,
     pageText,
     async goto(path) {
